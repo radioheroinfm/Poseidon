@@ -1,7 +1,8 @@
-//! Tauri commands, которые вызываются из desktop-bridge.
+//! Tauri commands, вызываемые из desktop-bridge.
 
 use crate::gateway::{GatewayManager, GatewayStatus};
 use tauri::{AppHandle, Manager, Runtime, State};
+use tauri_plugin_dialog::{DialogExt, FilePath};
 use serde::Serialize;
 use std::sync::Mutex;
 
@@ -12,6 +13,20 @@ pub struct SystemInfo {
     pub version: String,
     pub tauri_version: String,
     pub is_tauri: bool,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct OpenDialogOptions {
+    pub title: Option<String>,
+    pub default_path: Option<String>,
+    pub directory: Option<bool>,
+    pub multiple: Option<bool>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct SaveDialogOptions {
+    pub title: Option<String>,
+    pub default_path: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -81,6 +96,55 @@ pub async fn window_is_maximized<R: Runtime>(app: AppHandle<R>) -> Result<bool, 
 }
 
 // ---------------------------------------------------------------------------
+// Dialogs
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn show_open_dialog<R: Runtime>(
+    app: AppHandle<R>,
+    options: Option<OpenDialogOptions>,
+) -> Result<Option<Vec<String>>, String> {
+    let mut builder = app.dialog().file();
+
+    if let Some(opts) = options {
+        if let Some(title) = opts.title {
+            builder = builder.set_title(title);
+        }
+        if let Some(default_path) = opts.default_path {
+            builder = builder.set_directory(default_path);
+        }
+    }
+
+    // Упрощённо: один файл. multiple/directory можно расширить позже.
+    let result = builder.blocking_pick_file();
+
+    Ok(result.map(|path: FilePath| {
+        vec![path.to_string()]
+    }))
+}
+
+#[tauri::command]
+pub async fn show_save_dialog<R: Runtime>(
+    app: AppHandle<R>,
+    options: Option<SaveDialogOptions>,
+) -> Result<Option<String>, String> {
+    let mut builder = app.dialog().file();
+
+    if let Some(opts) = options {
+        if let Some(title) = opts.title {
+            builder = builder.set_title(title);
+        }
+        if let Some(default_path) = opts.default_path {
+            builder = builder.set_file_name(default_path);
+        }
+    }
+
+    let result = builder.blocking_save_file();
+
+    Ok(result.map(|path: FilePath| path.to_string()))
+}
+
+// ---------------------------------------------------------------------------
 // Shell
 // ---------------------------------------------------------------------------
 
@@ -105,7 +169,7 @@ pub async fn quit_app<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
 }
 
 // ---------------------------------------------------------------------------
-// Gateway — теперь с политикой владения
+// Gateway
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
@@ -130,24 +194,4 @@ pub async fn gateway_status(
 ) -> Result<GatewayStatus, String> {
     let mgr = state.lock().map_err(|e| e.to_string())?;
     mgr.status()
-}
-
-
-// ---------------------------------------------------------------------------
-// Dialogs (Безопасные обработчики до подключения tauri-plugin-dialog)
-// ---------------------------------------------------------------------------
-#[tauri::command]
-pub async fn show_open_dialog(
-    _options: Option<serde_json::Value>,
-) -> Result<Option<Vec<String>>, String> {
-    log::info!("show_open_dialog called (dialog plugin will be linked in next phase)");
-    Ok(None)
-}
-
-#[tauri::command]
-pub async fn show_save_dialog(
-    _options: Option<serde_json::Value>,
-) -> Result<Option<String>, String> {
-    log::info!("show_save_dialog called (dialog plugin will be linked in next phase)");
-    Ok(None)
 }

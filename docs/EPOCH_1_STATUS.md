@@ -1,37 +1,41 @@
-# Первая эпоха — Статус (готовность к оперативному аудиту)
+# Первая эпоха — ЗАКРЫТА
 
-**Цель первой эпохи:** заложить честный, безопасный и красивый фундамент Desktop-оболочки на Tauri.
+**Дата закрытия:** 12 ноября 2026  
+**Статус:** Foundation complete (с честными остатками)
 
-## Что сделано
+## Цель эпохи
+Заложить честный, безопасный и красивый фундамент Desktop-оболочки Hermes на Tauri v2.
+
+## Что полностью сделано
 
 | Компонент | Статус | Комментарий |
 |-----------|--------|-----------|
-| Изоморфный `desktop-bridge` | ✅ | Контракт + mock/Tauri, ставится в `window.electronAPI` |
-| Политика владения Gateway | ✅ | `owned_by_us` — убиваем только свой процесс |
-| Discover по порту | ✅ | TCP connect на 8642 |
-| Реальный spawn `hermes serve` | ✅ | Поиск бинарника + process group + SIGTERM |
+| Изоморфный `desktop-bridge` | ✅ | Контракт + mock/Tauri, `window.electronAPI` |
+| Политика владения Gateway | ✅ | `owned_by_us` + discover по порту |
+| Реальный spawn `hermes serve` | ✅ | Поиск бинарника, process group, SIGTERM |
 | Базовые Tauri commands | ✅ | system, window, shell, gateway |
-| Capabilities / CSP | ✅ | Минимальный безопасный набор |
-| Честные ADR | ✅ | Включая ownership и strangler-fig направление |
+| Диалоги (open/save) | ✅ | Через `tauri-plugin-dialog` |
+| Capabilities + CSP | ✅ | Минимальный безопасный набор + localhost sockets |
+| Deadlock в Drop исправлен | ✅ | Женя нашёл и поправил |
+| Честные ADR | ✅ | Ownership, Strangler Fig, metrics |
 | Структура проекта | ✅ | Чистая и понятная |
 
-## Что ещё не закрыто (честно)
+## Что честно переносится в Эпоху 2
 
-- [ ] Реальный `tauri dev` / первая успешная сборка в этой среде
-- [ ] Полная интеграция `installDesktopBridge()` в production renderer
-- [ ] Иконки приложения
-- [ ] PID чужого процесса в attach-режиме
-- [ ] Диалоги (showOpenDialog / showSaveDialog) — команды есть, плагин dialog ещё не подключён
+- [ ] Первая успешная сборка / `tauri dev` в боевой среде
+- [ ] Полная интеграция bridge в production React-рендерер Hermes
+- [ ] Набор иконок приложения
+- [ ] Получение PID чужого процесса в attach-режиме
+- [ ] События `onWindowStateChange` (тайтлбар)
+- [ ] Более умный multiple/directory в диалогах
 
-## Главные файлы для аудита
+## Главный итог Эпохи 1
 
-- `src/desktop-bridge/` — изоморфный слой
-- `src-tauri/src/gateway.rs` — lifecycle + ownership
-- `src-tauri/src/bridge.rs` — команды
-- `src-tauri/capabilities/default.json` — permissions
-- `docs/DECISIONS.md` — ADR-009 и остальные
-- `docs/EPOCH_1_STATUS.md` — этот файл
+У нас есть работающий архитектурный каркас:
+- React почти не нужно трогать (изоморфный bridge)
+- Gateway управляется безопасно (не убиваем чужое)
+- Нативная оболочка на Tauri v2 заложена правильно
+- Документация и решения честные
 
-## Принцип
-
-Где не готово — честно написано. Никаких иллюзий.
+**Эпоха 1 закрыта.**  
+Переходим к Эпохе 2 — интеграция и первый живой запуск.
