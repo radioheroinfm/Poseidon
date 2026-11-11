@@ -28,6 +28,8 @@ pub fn run() {
             gateway_start,
             gateway_stop,
             gateway_status,
+            show_open_dialog,
+            show_save_dialog,
         ])
         .setup(|_app| {
             log::info!("🔱 Poseidon Desktop starting (v{})", env!("CARGO_PKG_VERSION"));

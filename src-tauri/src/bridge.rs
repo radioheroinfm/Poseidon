@@ -131,3 +131,23 @@ pub async fn gateway_status(
     let mgr = state.lock().map_err(|e| e.to_string())?;
     mgr.status()
 }
+
+
+// ---------------------------------------------------------------------------
+// Dialogs (Безопасные обработчики до подключения tauri-plugin-dialog)
+// ---------------------------------------------------------------------------
+#[tauri::command]
+pub async fn show_open_dialog(
+    _options: Option<serde_json::Value>,
+) -> Result<Option<Vec<String>>, String> {
+    log::info!("show_open_dialog called (dialog plugin will be linked in next phase)");
+    Ok(None)
+}
+
+#[tauri::command]
+pub async fn show_save_dialog(
+    _options: Option<serde_json::Value>,
+) -> Result<Option<String>, String> {
+    log::info!("show_save_dialog called (dialog plugin will be linked in next phase)");
+    Ok(None)
+}

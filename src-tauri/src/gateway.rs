@@ -255,11 +255,10 @@ impl GatewayManager {
 
 impl Drop for GatewayManager {
     fn drop(&mut self) {
-        if let Ok(owned) = self.owned_by_us.lock() {
-            if *owned {
-                info!("GatewayManager dropped — stopping owned gateway");
-                let _ = self.stop();
-            }
+        let should_stop = self.owned_by_us.lock().map(|guard| *guard).unwrap_or(false);
+        if should_stop {
+            info!("GatewayManager dropped — stopping owned gateway");
+            let _ = self.stop();
         }
     }
 }
