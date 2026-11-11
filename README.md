@@ -30,13 +30,17 @@ Our mission:
 
 ```
 Poseidon/
-├── README.md                 # This file
+├── README.md
 ├── docs/
-│   ├── ARCHITECTURE.md       # Deep dive into current Hermes architecture
-│   ├── MIGRATION_PLAN.md     # Full detailed migration & refactoring plan
-│   └── DECISIONS.md          # Architecture Decision Records
-├── assets/                   # Banners, logos, screenshots
-├── src/                      # Future Tauri + React source (coming soon)
+│   ├── MANIFEST.md                 # 🔱 Библия проекта (Основной Закон)
+│   ├── JOB_GROK.md                 # Должностная инструкция Grok
+│   ├── JOB_KOLYAN.md               # Должностная инструкция Коляна
+│   ├── DEVELOPMENT_JOURNAL.md      # Журнал разработки
+│   ├── CORRESPONDENCE_JOURNAL.md   # Журнал переписки братьев
+│   ├── ARCHITECTURE.md
+│   ├── MIGRATION_PLAN.md
+│   └── DECISIONS.md
+├── assets/                         # Баннеры и визуал
 └── ...
 ```
 
