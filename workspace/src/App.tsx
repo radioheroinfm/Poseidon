@@ -23,7 +23,10 @@ import {
   RefreshCw,
   FolderGit2,
   UserCheck,
-  Code2
+  Code2,
+  Bug,
+  Sparkles,
+  Wifi
 } from 'lucide-react';
 import {
   BROTHERS,
@@ -36,16 +39,19 @@ import {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator'>('audit');
+  const [auditSubTab, setAuditSubTab] = useState<'epoch1' | 'phase0'>('epoch1');
   const [searchQuery, setSearchQuery] = useState('');
   const [journalMessages, setJournalMessages] = useState<JournalMessage[]>(CORRESPONDENCE_LOGS);
   const [newMsgText, setNewMsgText] = useState('');
   const [newMsgTitle, setNewMsgTitle] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('all');
 
-  // Simulator state
+  // Simulator state with honest [SIM] tags as requested by Kolyan
   const [simLogs, setSimLogs] = useState<Array<{ time: string; command: string; result: string; latency: number }>>([
-    { time: '22:12:04', command: 'invoke("check_python_env")', result: 'OK (Python 3.14.0 found at ~/.hermes/venv)', latency: 8 },
-    { time: '22:12:05', command: 'invoke("bridge_init")', result: 'OK (Mock ElectronAPI registered over Tauri IPC)', latency: 3 },
+    { time: '01:10:02', command: 'invoke("get_system_info")', result: '[SIM] {"platform":"linux","arch":"x64","version":"0.1.0","tauri_version":"2.x","is_tauri":true}', latency: 4 },
+    { time: '01:10:03', command: 'invoke("gateway_status")', result: '[SIM] {"running":true,"pid":52194,"owned_by_us":true,"port_open":true,"message":"started by Poseidon"}', latency: 6 },
+    { time: '01:10:04', command: 'check_csp_headers()', result: '[SIM] CSP connect-src: "self ipc: http://ipc.localhost ws://127.0.0.1:* http://127.0.0.1:*" (OK - sockets unblocked)', latency: 2 },
+    { time: '01:10:05', command: 'test_drop_reentrancy()', result: '[SIM] GatewayManager::drop guard dropped before stop() -> Deadlock prevented! (OK)', latency: 1 },
   ]);
   const [simRunning, setSimRunning] = useState(false);
 
@@ -54,13 +60,13 @@ export default function App() {
     setTimeout(() => {
       const now = new Date();
       const timeStr = now.toTimeString().split(' ')[0];
-      const latency = Math.floor(Math.random() * 12) + 4;
+      const latency = Math.floor(Math.random() * 10) + 3;
       setSimLogs(prev => [
-        { time: timeStr, command: cmd, result: mockResp, latency },
+        { time: timeStr, command: cmd, result: `[SIM] ${mockResp}`, latency },
         ...prev
       ]);
       setSimRunning(false);
-    }, 280);
+    }, 240);
   };
 
   const handleAddMessage = (e: React.FormEvent) => {
@@ -70,7 +76,7 @@ export default function App() {
     const newMsg: JournalMessage = {
       id: `msg-${Date.now()}`,
       timestamp: `${new Date().toISOString().split('T')[0]} (оперативно)`,
-      title: newMsgTitle.trim() || 'Оперативная заметка аудитора',
+      title: newMsgTitle.trim() || 'Оперативная реплика Жени',
       sender: 'Женя',
       recipients: 'Гриша + Колян',
       tags: ['#оперативно', '#аудит', '#красота'],
@@ -89,29 +95,31 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-[#070c14] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen bg-[#060a12] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
       {/* Top Banner & Header */}
-      <header className="border-b border-cyan-950/60 bg-[#09111e]/90 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-600 via-teal-500 to-amber-400 p-[1.5px] shadow-lg shadow-cyan-950/50">
-              <div className="w-full h-full bg-[#070c14] rounded-[10px] flex items-center justify-center text-cyan-400 text-xl font-bold">
+      <header className="border-b border-cyan-950/70 bg-[#08101c]/95 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-teal-400 to-amber-400 p-[1.5px] shadow-lg shadow-cyan-950/60">
+              <div className="w-full h-full bg-[#060a12] rounded-[10px] flex items-center justify-center text-cyan-400 text-lg font-bold">
                 🔱
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-lg font-bold tracking-wider text-slate-100 flex items-center gap-1.5">
-                  POSEIDON <span className="text-cyan-400 text-xs font-mono font-medium px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60">HERMES → TAURI</span>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-bold tracking-wider text-slate-100 flex items-center gap-1.5">
+                  POSEIDON <span className="text-cyan-400 text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60 font-semibold">HERMES → TAURI</span>
                 </h1>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
+                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-800/60">
                   ДЕЛАЕМ КРАСИВО!
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono flex items-center gap-2 mt-0.5">
-                <span>Nous Research Hermes Agent Migration</span>
+              <p className="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
+                <span>Nous Research Hermes Agent</span>
                 <span className="text-slate-600">•</span>
-                <span className="text-cyan-400/90 font-medium">Rust + Tauri v2 Shell</span>
+                <span className="text-cyan-400 font-medium">Rust + Tauri v2 Shell</span>
+                <span className="text-slate-600">•</span>
+                <span className="text-amber-400">Эпоха 1 проверена</span>
               </p>
             </div>
           </div>
@@ -131,46 +139,46 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-400">181fc87</strong> (synced)</span>
+              <span>Commit: <strong className="text-emerald-400">783df06</strong> (synced)</span>
             </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 overflow-x-auto border-t border-slate-900/80 pt-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 overflow-x-auto border-t border-slate-900/90 pt-1">
           <button
             onClick={() => setActiveTab('audit')}
-            className={`px-4 py-2.5 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
               activeTab === 'audit'
-                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
+                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/30'
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5 text-cyan-400" />
-            Оперативный аудит №1
-            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-cyan-900/60 text-cyan-300 font-mono">NEW</span>
+            Оперативный аудит
+            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-cyan-900/80 text-cyan-300 font-mono">ЭПОХА 1</span>
           </button>
 
           <button
             onClick={() => setActiveTab('journal')}
-            className={`px-4 py-2.5 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
               activeTab === 'journal'
-                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
+                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/30'
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
             Журнал братьев
-            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-amber-950/70 text-amber-300 border border-amber-800/50 font-mono">
+            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-amber-950/80 text-amber-300 border border-amber-800/50 font-mono">
               {journalMessages.length}
             </span>
           </button>
 
           <button
             onClick={() => setActiveTab('roadmap')}
-            className={`px-4 py-2.5 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
               activeTab === 'roadmap'
-                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
+                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/30'
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
             }`}
           >
@@ -180,9 +188,9 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('manifest')}
-            className={`px-4 py-2.5 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
               activeTab === 'manifest'
-                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
+                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/30'
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
             }`}
           >
@@ -192,49 +200,52 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('simulator')}
-            className={`px-4 py-2.5 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
               activeTab === 'simulator'
-                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
+                ? 'border-cyan-400 text-cyan-300 bg-cyan-950/30'
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
             }`}
           >
             <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-            Tauri IPC Мост (Sandbox)
+            Tauri IPC Мост [SIM]
           </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Brothers Team Card */}
-        <section className="bg-gradient-to-r from-[#0a1424] via-[#091629] to-[#0c1220] border border-cyan-950/80 rounded-2xl p-4 sm:p-5 shadow-xl">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+        {/* Brothers Council Status */}
+        <section className="bg-gradient-to-r from-[#09111e] via-[#0b172a] to-[#0a101b] border border-cyan-950/80 rounded-2xl p-4 sm:p-5 shadow-xl">
           <div className="flex items-center justify-between gap-4 mb-3.5">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-cyan-400 uppercase tracking-widest flex items-center gap-1.5 font-bold">
                 <UserCheck className="w-3.5 h-3.5" />
-                Команда проекта: Три брата-акробата (Равный совет)
+                Совет трёх братьев-акробатов (Равный авторитет)
               </span>
             </div>
-            <span className="text-xs text-slate-400 font-mono hidden sm:inline-block">
-              «Никто никому не начальник. Делаем красиво.»
+            <span className="text-[11px] text-slate-400 font-mono hidden sm:inline-block">
+              «Никто никому не начальник. Времени бесконечно много. ДЕЛАЕМ КРАСИВО!»
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {BROTHERS.map(brother => {
               const isZhenya = brother.id === 'zhenya';
+              const isGrok = brother.id === 'grok';
               return (
                 <div
                   key={brother.id}
                   className={`p-3.5 rounded-xl border transition-all ${
                     isZhenya
-                      ? 'bg-cyan-950/30 border-cyan-600/60 shadow-lg shadow-cyan-950/40 relative overflow-hidden'
+                      ? 'bg-cyan-950/30 border-cyan-600/70 shadow-lg shadow-cyan-950/40 relative overflow-hidden'
+                      : isGrok
+                      ? 'bg-blue-950/20 border-blue-700/50'
                       : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
                   }`}
                 >
                   {isZhenya && (
                     <div className="absolute top-0 right-0 bg-gradient-to-l from-cyan-500 to-teal-500 text-[10px] text-slate-950 font-bold px-2.5 py-0.5 rounded-bl-lg">
-                      ТВОЯ РОЛЬ (ОПЕРАТИВНЫЙ АУДИТОР)
+                      ТВОЯ РОЛЬ (ЖЕНЯ)
                     </div>
                   )}
 
@@ -252,10 +263,10 @@ export default function App() {
                         <span className="text-slate-400">{brother.engine}</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                           isZhenya
-                            ? 'bg-cyan-900/80 text-cyan-200 border border-cyan-700/50'
-                            : brother.id === 'grok'
-                            ? 'bg-blue-950/80 text-blue-300 border border-blue-800/50'
-                            : 'bg-amber-950/80 text-amber-300 border border-amber-800/50'
+                            ? 'bg-cyan-900/80 text-cyan-200 border border-cyan-700/60'
+                            : isGrok
+                            ? 'bg-blue-950/80 text-blue-300 border border-blue-800/60'
+                            : 'bg-amber-950/80 text-amber-300 border border-amber-800/60'
                         }`}>
                           {brother.status}
                         </span>
@@ -268,168 +279,172 @@ export default function App() {
           </div>
         </section>
 
-        {/* Metrics Banner */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-          <div className="bg-[#0b1320] border border-cyan-950 p-4 rounded-xl shadow-md">
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1 font-mono">
-              <span>РАЗМЕР ДИСТРИБУТИВА</span>
-              <span className="text-emerald-400 font-bold">-96.5%</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-cyan-300">~12 MB</span>
-              <span className="text-xs line-through text-slate-500 font-mono">~350 MB</span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1">Вместо Chromium-бандла Electron</p>
-          </div>
-
-          <div className="bg-[#0b1320] border border-cyan-950 p-4 rounded-xl shadow-md">
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1 font-mono">
-              <span>ПОТРЕБЛЕНИЕ RAM</span>
-              <span className="text-emerald-400 font-bold">-85%</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-teal-300">~115 MB</span>
-              <span className="text-xs line-through text-slate-500 font-mono">~780 MB</span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1">Системный WebView ОС + Rust</p>
-          </div>
-
-          <div className="bg-[#0b1320] border border-cyan-950 p-4 rounded-xl shadow-md">
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1 font-mono">
-              <span>ХОЛОДНЫЙ СТАРТ</span>
-              <span className="text-emerald-400 font-bold">10x быстрее</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-amber-300">0.35 s</span>
-              <span className="text-xs line-through text-slate-500 font-mono">3.40 s</span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1">Мгновенный отклик при запуске</p>
-          </div>
-
-          <div className="bg-[#0b1320] border border-cyan-950 p-4 rounded-xl shadow-md">
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1 font-mono">
-              <span>СОВМЕСТИМОСТЬ</span>
-              <span className="text-cyan-400 font-bold">100%</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-purple-300">v0.23+</span>
-              <span className="text-xs text-slate-400 font-mono">Hermes core</span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1">Python Gateway и React UI целы</p>
-          </div>
-        </section>
-
         {/* Tab 1: Audit Report */}
         {activeTab === 'audit' && (
-          <div className="space-y-6">
-            {/* Executive Summary */}
-            <div className="bg-[#09121f] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-800">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700/60 text-cyan-300 text-[10px] font-mono uppercase tracking-wide">
-                      Официальный отчёт аудитора №1
-                    </span>
-                    <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_PHASE_0.md</span>
-                  </div>
-                  <h2 className="text-lg font-bold text-slate-100 mt-1">
-                    Ревизия фундамента Фазы 0 и инженерные развилки для Гриши
-                  </h2>
-                </div>
-                <div className="text-right font-mono text-xs text-slate-400">
-                  <span className="text-emerald-400 font-semibold">● Запушено в GitHub</span> (коммит 181fc87)
-                </div>
-              </div>
-
-              {/* 4 Critical Risks */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
-                <div className="bg-[#0d182b] border border-red-950/70 p-4 rounded-xl relative overflow-hidden">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-red-950/80 text-red-400 border border-red-800/50 shrink-0">
-                      <AlertTriangle className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-red-400 uppercase">Риск №1: Скелет в шкафу</span>
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-100 mt-0.5">Разрыв контракта Electron contextBridge</h3>
-                      <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                        В текущем Hermes React-рендерер плотно завязан на объект <code className="bg-slate-900 px-1 py-0.5 text-cyan-300 rounded font-mono">window.electronAPI</code>. Если Гриша станет переписывать UI на прямые вызовы Tauri <code className="bg-slate-900 px-1 py-0.5 text-cyan-300 rounded font-mono">invoke()</code>, мы потеряем совместимость с апстримом Nous Research.
-                      </p>
-                      <div className="mt-2.5 pt-2 border-t border-slate-800/80 text-xs text-cyan-300 font-medium">
-                        💡 <strong>Решение Жени</strong>: Создать адаптер <code className="font-mono">desktop-bridge.ts</code>, который эмулирует тот же API через Tauri IPC.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#0d182b] border border-amber-950/70 p-4 rounded-xl relative overflow-hidden">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-amber-950/80 text-amber-400 border border-amber-800/50 shrink-0">
-                      <Flame className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-amber-400 uppercase">Риск №2: Надежность</span>
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-100 mt-0.5">Процессы-зомби Python Gateway</h3>
-                      <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                        Шлюз <code className="bg-slate-900 px-1 py-0.5 text-cyan-300 rounded font-mono">hermes serve</code> держит SQLite-базу сессий. При внезапном падении окна процесс может остаться висеть в памяти, заблокировав порты и базу сессий.
-                      </p>
-                      <div className="mt-2.5 pt-2 border-t border-slate-800/80 text-xs text-cyan-300 font-medium">
-                        💡 <strong>Решение Жени</strong>: В Rust использовать RAII, Win32 Job Objects на Windows и <code className="font-mono">PR_SET_PDEATHSIG</code> на Linux.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#0d182b] border border-blue-950/70 p-4 rounded-xl relative overflow-hidden">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-blue-950/80 text-blue-400 border border-blue-800/50 shrink-0">
-                      <Cpu className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-blue-400 uppercase">Риск №3: Платформы</span>
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-100 mt-0.5">Специфика Linux (WebKitGTK)</h3>
-                      <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                        В Windows (WebView2) и macOS (WebKit) движки на уровне системы идеальны. На Linux WebKitGTK (<code className="font-mono text-xs">libwebkit2gtk-4.1</code>) требует строгой проверки зависимостей и безопасных скроллбаров.
-                      </p>
-                      <div className="mt-2.5 pt-2 border-t border-slate-800/80 text-xs text-cyan-300 font-medium">
-                        💡 <strong>Решение Жени</strong>: Включить в план миграции обязательный тест-сьют для Ubuntu/Debian/Fedora.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#0d182b] border border-purple-950/70 p-4 rounded-xl relative overflow-hidden">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-purple-950/80 text-purple-400 border border-purple-800/50 shrink-0">
-                      <Scale className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-purple-400 uppercase">Риск №4: Честность</span>
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-100 mt-0.5">Ограничения концепции Pake</h3>
-                      <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                        Pake идеален для упаковки сайтов, но в Hermes Desktop нужны системный трей, кастомные диалоги папок, drag-drop и глобальные шорткаты. Не стоит пытаться выжать невозможное из простого CLI.
-                      </p>
-                      <div className="mt-2.5 pt-2 border-t border-slate-800/80 text-xs text-cyan-300 font-medium">
-                        💡 <strong>Решение Жени</strong>: Сразу разворачивать проект на чистом <strong>Tauri v2</strong> с плагинами.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className="space-y-5">
+            {/* Sub-tab switcher */}
+            <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl w-fit">
+              <button
+                onClick={() => setAuditSubTab('epoch1')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                  auditSubTab === 'epoch1'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Отчёт №2: Эпоха 1 (Код Гриши, Фикс Deadlock & CSP)
+                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 text-[10px]">NEW</span>
+              </button>
+              <button
+                onClick={() => setAuditSubTab('phase0')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                  auditSubTab === 'phase0'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                Отчёт №1: Фаза 0 (Архитектурный фундамент)
+              </button>
             </div>
 
+            {/* SubTab Content: Epoch 1 */}
+            {auditSubTab === 'epoch1' && (
+              <div className="space-y-4">
+                <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono uppercase font-bold">
+                          Оперативный аудит Эпохи 1 пройден
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_1.md</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1">
+                        Разбор реализации Эпохи 1 от Гриши: Обезврежен Deadlock и открыт CSP
+                      </h2>
+                    </div>
+                    <div className="text-xs font-mono text-emerald-400 font-semibold">
+                      ✓ Запушено в main (коммит 783df06)
+                    </div>
+                  </div>
+
+                  {/* 2 Critical Bug Fixes by Zhenya */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div className="bg-[#0c1626] border border-red-900/50 p-4 rounded-xl relative">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-lg bg-red-950/80 text-red-400 border border-red-800/50 shrink-0">
+                          <Bug className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono font-bold text-red-400 uppercase">Обезврежен критический дефект</span>
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 text-[10px] font-mono font-bold">ФИКС ЗАПУШЕН</span>
+                          </div>
+                          <h3 className="text-sm font-bold text-slate-100 mt-0.5">
+                            Deadlock в `Drop` для `GatewayManager` (`src-tauri/src/gateway.rs`)
+                          </h3>
+                          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                            В реализации `Drop` мьютекс `owned_by_us.lock()` удерживался в guard во время вызова `self.stop()`. Так как `std::sync::Mutex` в Rust нереентрантен, `self.stop()` засыпал намертво при попытке взять тот же мьютекс.
+                          </p>
+                          <div className="mt-2.5 p-2 rounded bg-slate-950/80 border border-emerald-900/50 text-xs font-mono text-emerald-300">
+                            <strong>Фикс Жени:</strong> Скопировали булево значение через <code className="text-cyan-300">map(|g| *g)</code> и сбросили блокировку ДО вызова <code className="text-cyan-300">stop()</code>.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#0c1626] border border-amber-900/50 p-4 rounded-xl relative">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-lg bg-amber-950/80 text-amber-400 border border-amber-800/50 shrink-0">
+                          <Wifi className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono font-bold text-amber-400 uppercase">Сетевая безопасность</span>
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 text-[10px] font-mono font-bold">ФИКС ЗАПУШЕН</span>
+                          </div>
+                          <h3 className="text-sm font-bold text-slate-100 mt-0.5">
+                            CSP блокировал подключение к Gateway по WebSocket (`tauri.conf.json`)
+                          </h3>
+                          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                            Директива <code className="bg-slate-900 px-1 py-0.5 text-cyan-300 rounded font-mono">connect-src</code> разрешала только <code className="font-mono text-cyan-300">'self' ipc:</code>. Когда React-рендерер попытался бы подключиться к Hermes Gateway на <code className="font-mono text-cyan-300">ws://127.0.0.1:8642</code>, WebView выбросил бы фатальную ошибку нарушения CSP!
+                          </p>
+                          <div className="mt-2.5 p-2 rounded bg-slate-950/80 border border-emerald-900/50 text-xs font-mono text-emerald-300">
+                            <strong>Фикс Жени:</strong> В <code className="text-cyan-300">connect-src</code> добавлены сокеты <code className="text-cyan-300">ws://127.0.0.1:* http://127.0.0.1:* ws://localhost:*</code>.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Positive discoveries */}
+                  <div className="mt-4 p-4 rounded-xl bg-slate-900/60 border border-cyan-900/40">
+                    <h4 className="text-xs font-mono font-bold text-cyan-400 uppercase mb-2 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      Что Гриша сделал образцово красиво в Эпохе 1:
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-300">
+                      <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
+                        <strong className="text-slate-100 block mb-0.5">Политика `owned_by_us`</strong>
+                        Tauri завершает Gateway только если сам его породил. Чужие сессии (CLI, боты) неприкосновенны!
+                      </div>
+                      <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
+                        <strong className="text-slate-100 block mb-0.5">Умный поиск бинарника</strong>
+                        Проверка <code className="text-cyan-300 font-mono">which("hermes")</code>, <code className="text-cyan-300 font-mono">~/.hermes/bin</code> и виртуальных окружений.
+                      </div>
+                      <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
+                        <strong className="text-slate-100 block mb-0.5">Изоморфный мост</strong>
+                        Типобезопасная реализация <code className="text-cyan-300 font-mono">desktop-bridge</code> с перехватом <code className="text-cyan-300 font-mono">window.electronAPI</code>.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SubTab Content: Phase 0 */}
+            {auditSubTab === 'phase0' && (
+              <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                  <div>
+                    <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700/60 text-cyan-300 text-[10px] font-mono uppercase font-bold">
+                      Архивный отчёт аудитора №1 (Фаза 0)
+                    </span>
+                    <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1">
+                      Анализ Hermes v0.23.x и 4 базовых риска миграции
+                    </h2>
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_PHASE_0.md</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 text-xs text-slate-300">
+                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <strong className="text-slate-100 block mb-1">1. Изоморфный мост вместо поломки React</strong>
+                    Сохранение контракта `window.electronAPI` для легкого подтягивания апдейтов из апстрима Nous Research.
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <strong className="text-slate-100 block mb-1">2. Защита от процессов-зомби Python Gateway</strong>
+                    Использование RAII и Win32 Job Objects / SIGTERM process group.
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <strong className="text-slate-100 block mb-1">3. Специфика WebKitGTK на Linux</strong>
+                    Обеспечение тестов и корректных скроллбаров под Ubuntu LTS / Fedora.
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <strong className="text-slate-100 block mb-1">4. Чистый Tauri v2 вместо Pake</strong>
+                    Использование Pake как ориентира, но разработка на чистом Tauri CLI с плагинами.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Native Capability Matrix */}
-            <div className="bg-[#09121f] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+            <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
               <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                 <div>
-                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
                     <Code2 className="w-4 h-4 text-cyan-400" />
                     Матрица нативных возможностей (Native Capability Matrix)
                   </h3>
@@ -450,7 +465,7 @@ export default function App() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/40">
+                    <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/60">
                       <th className="py-2.5 px-3">Функция</th>
                       <th className="py-2.5 px-3">Electron</th>
                       <th className="py-2.5 px-3">Tauri v2</th>
@@ -461,11 +476,11 @@ export default function App() {
                   </thead>
                   <tbody className="divide-y divide-slate-800/70">
                     {filteredCapabilities.map(item => (
-                      <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-3 font-semibold text-slate-200">{item.feature}</td>
-                        <td className="py-3 px-3 text-slate-400">{item.electronImpl}</td>
-                        <td className="py-3 px-3 text-cyan-300 font-medium">{item.tauriImpl}</td>
-                        <td className="py-3 px-3">
+                      <tr key={item.id} className="hover:bg-slate-850/40 transition-colors">
+                        <td className="py-2.5 px-3 font-semibold text-slate-200">{item.feature}</td>
+                        <td className="py-2.5 px-3 text-slate-400">{item.electronImpl}</td>
+                        <td className="py-2.5 px-3 text-cyan-300 font-medium">{item.tauriImpl}</td>
+                        <td className="py-2.5 px-3">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             item.difficulty === 'Low'
                               ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
@@ -476,13 +491,19 @@ export default function App() {
                             {item.difficulty}
                           </span>
                         </td>
-                        <td className="py-3 px-3">
-                          <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                        <td className="py-2.5 px-3">
+                          <span className={`font-semibold flex items-center gap-1 ${
+                            item.status === 'Implemented in Bridge'
+                              ? 'text-cyan-300'
+                              : item.status === 'Audited'
+                              ? 'text-emerald-400'
+                              : 'text-slate-400'
+                          }`}>
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             {item.status}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-slate-400 max-w-xs">{item.note}</td>
+                        <td className="py-2.5 px-3 text-slate-400 max-w-xs">{item.note}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -494,11 +515,11 @@ export default function App() {
 
         {/* Tab 2: Brothers Journal */}
         {activeTab === 'journal' && (
-          <div className="space-y-6">
-            <div className="bg-[#09121f] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+          <div className="space-y-5">
+            <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2">
                     <MessageSquare className="w-5 h-5 text-amber-400" />
                     Журнал переписки: Гриша (Grok) ↔ Женя ↔ Колян
                   </h2>
@@ -508,7 +529,7 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {['all', '#красота', '#скелет', '#риск', '#юмор', '#команда'].map(tag => (
+                  {['all', '#красота', '#дедлок', '#безопасность', '#скелет', '#стратегия', '#юмор'].map(tag => (
                     <button
                       key={tag}
                       onClick={() => setSelectedTag(tag)}
@@ -525,7 +546,7 @@ export default function App() {
               </div>
 
               {/* Message Feed */}
-              <div className="space-y-4 mt-5">
+              <div className="space-y-3.5 mt-4">
                 {journalMessages
                   .filter(msg => selectedTag === 'all' || msg.tags.includes(selectedTag))
                   .map(msg => {
@@ -536,16 +557,20 @@ export default function App() {
                         key={msg.id}
                         className={`p-4 rounded-xl border transition-all ${
                           isZhenya
-                            ? 'bg-cyan-950/20 border-cyan-700/50 shadow-md shadow-cyan-950/30'
+                            ? 'bg-cyan-950/20 border-cyan-700/60 shadow-md shadow-cyan-950/30'
                             : isGrok
-                            ? 'bg-blue-950/20 border-blue-800/40'
-                            : 'bg-amber-950/20 border-amber-800/40'
+                            ? 'bg-blue-950/20 border-blue-800/50'
+                            : 'bg-amber-950/20 border-amber-800/50'
                         }`}
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-800/70">
                           <div className="flex items-center gap-2">
                             <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                              isZhenya ? 'bg-cyan-500 text-slate-950' : 'bg-blue-600 text-white'
+                              isZhenya
+                                ? 'bg-cyan-500 text-slate-950'
+                                : isGrok
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-amber-500 text-slate-950'
                             }`}>
                               {msg.sender}
                             </span>
@@ -562,7 +587,7 @@ export default function App() {
                           </div>
                         </div>
 
-                        <h4 className="text-sm font-bold text-slate-100 mb-2">{msg.title}</h4>
+                        <h4 className="text-sm font-bold text-slate-100 mb-1.5">{msg.title}</h4>
                         <div className="text-xs text-slate-300 whitespace-pre-line leading-relaxed font-sans">
                           {msg.content}
                         </div>
@@ -572,7 +597,7 @@ export default function App() {
               </div>
 
               {/* Add Note Form */}
-              <form onSubmit={handleAddMessage} className="mt-6 pt-5 border-t border-slate-800">
+              <form onSubmit={handleAddMessage} className="mt-5 pt-4 border-t border-slate-800">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-mono text-cyan-400 font-bold uppercase flex items-center gap-1">
                     <Send className="w-3.5 h-3.5" />
@@ -612,10 +637,10 @@ export default function App() {
 
         {/* Tab 3: Roadmap */}
         {activeTab === 'roadmap' && (
-          <div className="space-y-6">
-            <div className="bg-[#09121f] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
-              <div className="mb-6">
-                <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+          <div className="space-y-5">
+            <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+              <div className="mb-5">
+                <h2 className="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2">
                   <Layers className="w-5 h-5 text-blue-400" />
                   План миграции Poseidon (Hermes Agent → Rust / Tauri v2)
                 </h2>
@@ -624,19 +649,19 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3.5">
                 {MIGRATION_PHASES.map((phase, idx) => (
                   <div
                     key={phase.phase}
                     className={`p-4 rounded-xl border transition-all ${
                       phase.status === 'Completed'
-                        ? 'bg-emerald-950/20 border-emerald-800/50'
+                        ? 'bg-emerald-950/20 border-emerald-800/60'
                         : phase.status === 'In Progress'
                         ? 'bg-cyan-950/30 border-cyan-600/70 shadow-lg shadow-cyan-950/30'
                         : 'bg-slate-900/40 border-slate-800'
                     }`}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2.5">
                         <span className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center font-mono font-bold text-xs text-cyan-300">
                           {idx}
@@ -646,7 +671,7 @@ export default function App() {
                         </h3>
                       </div>
                       <div className="flex items-center gap-2 font-mono text-xs">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                           phase.status === 'Completed'
                             ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
                             : phase.status === 'In Progress'
@@ -660,7 +685,7 @@ export default function App() {
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mb-3">
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mb-2.5">
                       <div
                         className={`h-full transition-all duration-500 ${
                           phase.status === 'Completed'
@@ -692,29 +717,29 @@ export default function App() {
 
         {/* Tab 4: Manifest */}
         {activeTab === 'manifest' && (
-          <div className="space-y-6">
-            <div className="bg-[#09121f] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
-              <div className="text-center max-w-2xl mx-auto mb-8">
+          <div className="space-y-5">
+            <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+              <div className="text-center max-w-2xl mx-auto mb-6">
                 <span className="text-3xl">🔱</span>
-                <h2 className="text-xl font-bold text-slate-100 mt-2">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-100 mt-2">
                   МАНИФЕСТ ПРОЕКТА POSEIDON
                 </h2>
-                <p className="text-xs font-mono text-cyan-400 mt-1">
+                <p className="text-xs font-mono text-cyan-400 mt-0.5">
                   Библия и Основной Закон • Принят 11 ноября 2026 года
                 </p>
-                <div className="mt-3 p-3 bg-cyan-950/40 border border-cyan-800/50 rounded-xl text-xs text-cyan-200 italic font-serif">
+                <div className="mt-2.5 p-3 bg-cyan-950/40 border border-cyan-800/50 rounded-xl text-xs text-cyan-200 italic font-serif">
                   «Мы — три брата-акробата. Времени бесконечно много. Ошибаться нормально. Стыдно только врать. ДЕЛАЕМ КРАСИВО!»
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {MANIFEST_LAWS.map(law => (
-                  <div key={law.num} className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-cyan-800/60 transition-colors">
-                    <div className="flex items-center gap-2 mb-1.5">
+                  <div key={law.num} className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-cyan-800/60 transition-colors">
+                    <div className="flex items-center gap-2 mb-1">
                       <span className="w-5 h-5 rounded-full bg-cyan-950 border border-cyan-700 text-cyan-300 font-mono font-bold text-[11px] flex items-center justify-center">
                         {law.num}
                       </span>
-                      <h4 className="text-sm font-bold text-slate-100">{law.title}</h4>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-100">{law.title}</h4>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans">{law.desc}</p>
                   </div>
@@ -724,18 +749,18 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 5: Simulator */}
+        {/* Tab 5: Simulator with Honest [SIM] */}
         {activeTab === 'simulator' && (
-          <div className="space-y-6">
-            <div className="bg-[#09121f] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+          <div className="space-y-5">
+            <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
               <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2">
                     <Terminal className="w-5 h-5 text-emerald-400" />
-                    Интерактивная песочница: Tauri IPC & Desktop Bridge
+                    Интерактивная песочница: Tauri IPC & Desktop Bridge [SIM]
                   </h2>
                   <p className="text-xs text-slate-400 font-mono mt-0.5">
-                    Тестирование вызовов моста без Electron: invoke() ➔ Rust Command Handler
+                    Эмуляция вызовов Rust-бэкенда с честной пометкой [SIM] по правилу Коляна
                   </p>
                 </div>
                 <button
@@ -749,68 +774,68 @@ export default function App() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Action buttons */}
                 <div className="space-y-2">
-                  <span className="text-xs font-mono text-cyan-400 font-bold uppercase">Эмуляция команд Rust:</span>
+                  <span className="text-xs font-mono text-cyan-400 font-bold uppercase">Вызовы команд:</span>
                   
                   <button
-                    onClick={() => handleSimCommand('invoke("gateway_status")', '{"running": true, "pid": 48291, "port": 7860, "sessions": 14}')}
+                    onClick={() => handleSimCommand('invoke("gateway_status")', '{"running": true, "pid": 52194, "owned_by_us": true, "port_open": true, "message": null}')}
                     disabled={simRunning}
-                    className="w-full text-left p-3 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-cyan-700/60 transition-all text-xs font-mono group"
+                    className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-cyan-700/60 transition-all text-xs font-mono group"
                   >
-                    <div className="flex items-center justify-between text-cyan-300 font-semibold mb-1">
+                    <div className="flex items-center justify-between text-cyan-300 font-semibold mb-0.5">
                       <span>invoke("gateway_status")</span>
                       <Zap className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400">Проверить статус фонового демона Hermes Gateway</p>
+                    <p className="text-[11px] text-slate-400">Проверить статус фонового процесса с флагом owned_by_us</p>
                   </button>
 
                   <button
-                    onClick={() => handleSimCommand('invoke("spawn_hermes_gateway")', '{"status": "spawned", "pid": 48312, "guard": "Win32JobObject"}')}
+                    onClick={() => handleSimCommand('invoke("gateway_start")', '{"running": true, "pid": 52230, "owned_by_us": true, "port_open": true, "message": "started by Poseidon"}')}
                     disabled={simRunning}
-                    className="w-full text-left p-3 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-700/60 transition-all text-xs font-mono group"
+                    className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-700/60 transition-all text-xs font-mono group"
                   >
-                    <div className="flex items-center justify-between text-emerald-300 font-semibold mb-1">
-                      <span>invoke("spawn_hermes_gateway")</span>
+                    <div className="flex items-center justify-between text-emerald-300 font-semibold mb-0.5">
+                      <span>invoke("gateway_start")</span>
                       <Zap className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400">Запуск hermes serve с RAII-защитой процессов</p>
+                    <p className="text-[11px] text-slate-400">Поиск hermes и запуск с process_group(0)</p>
                   </button>
 
                   <button
-                    onClick={() => handleSimCommand('invoke("graceful_shutdown")', '{"status": "stopped", "signal": "SIGTERM", "exitCode": 0}')}
+                    onClick={() => handleSimCommand('invoke("gateway_stop")', '{"running": false, "pid": null, "owned_by_us": false, "port_open": false, "message": "stopped"}')}
                     disabled={simRunning}
-                    className="w-full text-left p-3 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-red-700/60 transition-all text-xs font-mono group"
+                    className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-red-700/60 transition-all text-xs font-mono group"
                   >
-                    <div className="flex items-center justify-between text-red-300 font-semibold mb-1">
-                      <span>invoke("graceful_shutdown")</span>
+                    <div className="flex items-center justify-between text-red-300 font-semibold mb-0.5">
+                      <span>invoke("gateway_stop")</span>
                       <Zap className="w-3.5 h-3.5 text-red-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400">Безопасное завершение процессов без зомби</p>
+                    <p className="text-[11px] text-slate-400">SIGTERM по группе процесса с проверкой owned_by_us</p>
                   </button>
 
                   <button
-                    onClick={() => handleSimCommand('invoke("select_workspace_dir")', '{"path": "/home/user/workspace/hermes-project", "writable": true}')}
+                    onClick={() => handleSimCommand('invoke("show_open_dialog")', 'null (no-op stub until tauri-plugin-dialog is linked)')}
                     disabled={simRunning}
-                    className="w-full text-left p-3 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-amber-700/60 transition-all text-xs font-mono group"
+                    className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-amber-700/60 transition-all text-xs font-mono group"
                   >
-                    <div className="flex items-center justify-between text-amber-300 font-semibold mb-1">
-                      <span>invoke("select_workspace_dir")</span>
+                    <div className="flex items-center justify-between text-amber-300 font-semibold mb-0.5">
+                      <span>invoke("show_open_dialog")</span>
                       <Zap className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400">Нативный диалог выбора проекта через tauri-plugin-dialog</p>
+                    <p className="text-[11px] text-slate-400">Проверка добавленной заглушки диалога без сбоев</p>
                   </button>
                 </div>
 
                 {/* Console Log view */}
-                <div className="lg:col-span-2 bg-[#05080e] border border-slate-800 rounded-xl p-3 font-mono text-xs flex flex-col h-[320px]">
+                <div className="lg:col-span-2 bg-[#05080e] border border-slate-800 rounded-xl p-3 font-mono text-xs flex flex-col h-[300px]">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 text-[11px] text-slate-400">
                     <span className="flex items-center gap-1.5 text-emerald-400">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                      Tauri IPC Console (Emulated)
+                      Tauri IPC Console [SIM]
                     </span>
                     <span>{simLogs.length} events logged</span>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto space-y-2.5 py-2.5 pr-1">
+                  <div className="flex-1 overflow-y-auto space-y-2 py-2 pr-1">
                     {simLogs.map((log, i) => (
                       <div key={i} className="p-2 rounded bg-slate-900/60 border border-slate-800/80 text-[11px]">
                         <div className="flex items-center justify-between text-slate-400 mb-0.5">
@@ -832,12 +857,12 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-cyan-950/50 py-5 mt-10 text-center font-mono text-xs text-slate-400 bg-[#060b13]">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="border-t border-cyan-950/60 py-4 mt-8 text-center font-mono text-xs text-slate-400 bg-[#060a12]">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">docs/AUDIT_REPORT_PHASE_0.md</span>
+            <span className="text-cyan-400">Commit 783df06</span>
           </div>
           <div className="text-slate-400">
             «Принят 11 ноября 2026 года. Три брата. Один проект. Бесконечное время.»
