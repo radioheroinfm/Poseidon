@@ -10,21 +10,29 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "Poseidon — Hermes Desktop",
         "width": 1280,
         "height": 840,
+        "minWidth": 900,
+        "minHeight": 600,
         "resizable": true,
         "fullscreen": false,
-        "decorations": false
+        "decorations": false,
+        "center": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost",
+      "capabilities": ["default"]
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": []
+    "icon": [],
+    "category": "Productivity",
+    "shortDescription": "Hermes Agent Desktop on Tauri",
+    "longDescription": "Native desktop shell for Hermes Agent, built with Tauri v2."
   }
 }

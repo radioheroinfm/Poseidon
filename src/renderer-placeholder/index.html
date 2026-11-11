@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Poseidon</title>
   <style>
-    :root {
-      color-scheme: dark;
-    }
+    :root { color-scheme: dark; }
     body {
       margin: 0;
       height: 100vh;
@@ -19,57 +17,112 @@
       color: #67e8f9;
       font-family: "JetBrains Mono", "Fira Code", ui-monospace, system-ui, sans-serif;
       text-align: center;
-      gap: 12px;
+      gap: 14px;
+      user-select: none;
     }
     h1 {
-      font-size: 2.4rem;
+      font-size: 2.5rem;
       margin: 0;
-      letter-spacing: 0.04em;
-      text-shadow: 0 0 24px rgba(103, 232, 249, 0.35);
-    }
-    .status {
-      font-size: 0.95rem;
-      opacity: 0.85;
-      max-width: 520px;
-      line-height: 1.5;
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 28px rgba(103, 232, 249, 0.4);
     }
     .badge {
-      display: inline-block;
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 999px;
       border: 1px solid rgba(103, 232, 249, 0.35);
       background: rgba(103, 232, 249, 0.08);
-      font-size: 0.8rem;
-      letter-spacing: 0.06em;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+    }
+    .status {
+      font-size: 0.95rem;
+      opacity: 0.9;
+      max-width: 480px;
+      line-height: 1.55;
     }
     .muted {
-      opacity: 0.55;
+      opacity: 0.5;
+      font-size: 0.82rem;
+      margin-top: 8px;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    button {
+      background: rgba(103, 232, 249, 0.1);
+      border: 1px solid rgba(103, 232, 249, 0.35);
+      color: #67e8f9;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
       font-size: 0.85rem;
+    }
+    button:hover {
+      background: rgba(103, 232, 249, 0.18);
+    }
+    #log {
+      margin-top: 20px;
+      font-size: 0.8rem;
+      opacity: 0.7;
+      min-height: 1.2em;
     }
   </style>
 </head>
 <body>
-  <div class="badge">POSEIDON DESKTOP</div>
+  <div class="badge">POSEIDON DESKTOP • EPOCH 1</div>
   <h1>🔱 Poseidon</h1>
-  <div class="status" id="status">
-    Bridge is waking up...
+  <div class="status" id="status">Initializing bridge...</div>
+  <div class="muted">Frameless window • Gateway ownership policy active</div>
+
+  <div class="row">
+    <button id="btn-info">System Info</button>
+    <button id="btn-gateway">Gateway Status</button>
   </div>
-  <div class="muted" id="details"></div>
+  <div id="log"></div>
 
   <script type="module">
-    // В будущем здесь будет:
-    // import { installDesktopBridge, getDesktopAPI } from '../desktop-bridge';
-    // await installDesktopBridge();
-    // const api = await getDesktopAPI();
+    // Когда проект будет собираться нормально, здесь будет:
+    // import { installDesktopBridge } from '../../desktop-bridge/index.ts';
+    // Сейчас — честная демонстрационная заглушка с проверкой наличия API.
 
     const statusEl = document.getElementById('status');
-    const detailsEl = document.getElementById('details');
+    const logEl = document.getElementById('log');
 
-    // Честная заглушка. Когда bridge будет реально подключён — заменим.
-    statusEl.textContent = "Renderer placeholder is alive";
-    detailsEl.textContent = "desktop-bridge will be installed here • Gateway ownership policy is active in Rust";
+    function log(msg) {
+      logEl.textContent = msg;
+      console.log('[Poseidon]', msg);
+    }
 
-    console.log("[Poseidon] renderer-placeholder loaded");
+    // Проверяем, есть ли уже bridge (в будущем его поставит preload/entry)
+    const hasBridge = !!(window.electronAPI || window.poseidon);
+
+    if (hasBridge) {
+      statusEl.textContent = 'Bridge detected (window.electronAPI)';
+    } else {
+      statusEl.textContent = 'Bridge not installed yet (placeholder mode)';
+      log('desktop-bridge will be wired in the next integration step');
+    }
+
+    document.getElementById('btn-info').onclick = async () => {
+      if (window.electronAPI?.getSystemInfo) {
+        const info = await window.electronAPI.getSystemInfo();
+        log(JSON.stringify(info));
+      } else {
+        log('getSystemInfo() not available — bridge not connected');
+      }
+    };
+
+    document.getElementById('btn-gateway').onclick = async () => {
+      if (window.electronAPI?.gatewayStatus) {
+        const st = await window.electronAPI.gatewayStatus();
+        log(JSON.stringify(st));
+      } else {
+        log('gatewayStatus() not available — bridge not connected');
+      }
+    };
   </script>
 </body>
 </html>

@@ -1,13 +1,12 @@
 /**
  * Poseidon Desktop Bridge
- * 
- * Изоморфный слой совместимости.
- * 
- * Когда мы внутри Tauri — используем invoke/listen.
- * Когда мы в обычном браузере (для разработки UI) — используем моки.
- * 
- * React-код Hermes продолжает работать с window.electronAPI
- * и ничего не подозревает.
+ *
+ * Изоморфный слой совместимости с window.electronAPI из Hermes Desktop.
+ *
+ * - Внутри Tauri  → настоящие invoke
+ * - В браузере    → честные моки
+ *
+ * React-код Hermes продолжает работать с window.electronAPI.
  */
 
 import type {
@@ -17,22 +16,27 @@ import type {
   WindowState,
   OpenDialogOptions,
   SaveDialogOptions,
+  GatewayStatus,
 } from './types';
 
 // -------------------------------------------------
 // Определение среды
 // -------------------------------------------------
 
-const isTauri = typeof window !== 'undefined' &&
+function detectTauri(): boolean {
+  if (typeof window === 'undefined') return false;
   // @ts-expect-error
-  (window.__TAURI_INTERNALS__ !== undefined || window.__TAURI__ !== undefined);
+  return !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
+}
+
+const isTauri = detectTauri();
 
 // -------------------------------------------------
-// Мок-реализация (для разработки UI без Tauri)
+// Мок-реализация
 // -------------------------------------------------
 
 function createMockAPI(): PoseidonDesktopAPI {
-  console.log('[Poseidon Bridge] Running in MOCK mode (browser)');
+  console.log('[Poseidon Bridge] MOCK mode');
 
   return {
     async getSystemInfo(): Promise<SystemInfo> {
@@ -47,57 +51,47 @@ function createMockAPI(): PoseidonDesktopAPI {
     async getPlatform(): Promise<Platform> {
       return 'linux';
     },
-    async windowMinimize() { console.log('[mock] windowMinimize'); },
-    async windowMaximize() { console.log('[mock] windowMaximize'); },
-    async windowClose() { console.log('[mock] windowClose'); },
+    async windowMinimize() {},
+    async windowMaximize() {},
+    async windowClose() {},
     async windowIsMaximized() { return false; },
-    onWindowStateChange(cb) {
-      // no-op unsubscribe
+    onWindowStateChange(_cb) {
       return () => {};
     },
-    async showOpenDialog() {
-      console.log('[mock] showOpenDialog');
+    async showOpenDialog(_options?: OpenDialogOptions) {
       return null;
     },
-    async showSaveDialog() {
-      console.log('[mock] showSaveDialog');
+    async showSaveDialog(_options?: SaveDialogOptions) {
       return null;
     },
     async openExternal(url: string) {
       window.open(url, '_blank');
     },
-    async openPath(path: string) {
-      console.log('[mock] openPath', path);
-    },
-    async gatewayStart() {
+    async openPath(_path: string) {},
+    async gatewayStart(): Promise<GatewayStatus> {
       return { running: false, owned_by_us: false, port_open: false, message: 'mock' };
     },
-    async gatewayStop() {
+    async gatewayStop(): Promise<GatewayStatus> {
       return { running: false, owned_by_us: false, port_open: false, message: 'mock' };
     },
-    async gatewayStatus() {
+    async gatewayStatus(): Promise<GatewayStatus> {
       return { running: false, owned_by_us: false, port_open: false, message: 'mock' };
     },
     async getVersion() {
       return '0.1.0-dev';
     },
-    async quit() {
-      console.log('[mock] quit');
-    },
+    async quit() {},
   };
 }
 
 // -------------------------------------------------
-// Реальная Tauri-реализация (будет расширяться)
+// Tauri-реализация
 // -------------------------------------------------
 
 async function createTauriAPI(): Promise<PoseidonDesktopAPI> {
-  // Динамический импорт, чтобы не ломать сборку в чистом браузере
   const { invoke } = await import('@tauri-apps/api/core');
-  // const { listen } = await import('@tauri-apps/api/event');
-  // const { getCurrentWindow } = await import('@tauri-apps/api/window');
 
-  console.log('[Poseidon Bridge] Running in TAURI mode');
+  console.log('[Poseidon Bridge] TAURI mode');
 
   return {
     async getSystemInfo() {
@@ -135,13 +129,13 @@ async function createTauriAPI(): Promise<PoseidonDesktopAPI> {
       return invoke('open_path', { path });
     },
     async gatewayStart() {
-      return invoke('gateway_start');
+      return invoke<GatewayStatus>('gateway_start');
     },
     async gatewayStop() {
-      return invoke('gateway_stop');
+      return invoke<GatewayStatus>('gateway_stop');
     },
     async gatewayStatus() {
-      return invoke('gateway_status');
+      return invoke<GatewayStatus>('gateway_status');
     },
     async getVersion() {
       return invoke<string>('get_version');
@@ -153,7 +147,7 @@ async function createTauriAPI(): Promise<PoseidonDesktopAPI> {
 }
 
 // -------------------------------------------------
-// Инициализация и экспорт
+// Публичный API
 // -------------------------------------------------
 
 let apiPromise: Promise<PoseidonDesktopAPI> | null = null;
@@ -169,15 +163,14 @@ export async function getDesktopAPI(): Promise<PoseidonDesktopAPI> {
  * Устанавливает bridge в window.
  * Вызывать один раз при старте приложения.
  */
-export async function installDesktopBridge(): Promise<void> {
+export async function installDesktopBridge(): Promise<PoseidonDesktopAPI> {
   const api = await getDesktopAPI();
 
-  // Главный трюк совместимости с оригинальным Hermes
   (window as any).electronAPI = api;
   (window as any).poseidon = api;
 
-  console.log('[Poseidon Bridge] installed as window.electronAPI + window.poseidon');
+  console.log('[Poseidon Bridge] installed → window.electronAPI + window.poseidon');
+  return api;
 }
 
-// Для удобства
-export type { PoseidonDesktopAPI, SystemInfo, Platform, WindowState };
+export type { PoseidonDesktopAPI, SystemInfo, Platform, WindowState, GatewayStatus };
