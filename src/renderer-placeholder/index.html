@@ -5,26 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Poseidon</title>
   <style>
+    :root {
+      color-scheme: dark;
+    }
     body {
       margin: 0;
       height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: #070c14;
+      background: radial-gradient(ellipse at center, #0b1628 0%, #070c14 70%);
       color: #67e8f9;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: "JetBrains Mono", "Fira Code", ui-monospace, system-ui, sans-serif;
+      text-align: center;
+      gap: 12px;
+    }
+    h1 {
+      font-size: 2.4rem;
+      margin: 0;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 24px rgba(103, 232, 249, 0.35);
+    }
+    .status {
+      font-size: 0.95rem;
+      opacity: 0.85;
+      max-width: 520px;
+      line-height: 1.5;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(103, 232, 249, 0.35);
+      background: rgba(103, 232, 249, 0.08);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+    }
+    .muted {
+      opacity: 0.55;
+      font-size: 0.85rem;
     }
   </style>
 </head>
 <body>
-  <div>
-    <h1>🔱 Poseidon</h1>
-    <p>Desktop Bridge is being born...</p>
+  <div class="badge">POSEIDON DESKTOP</div>
+  <h1>🔱 Poseidon</h1>
+  <div class="status" id="status">
+    Bridge is waking up...
   </div>
+  <div class="muted" id="details"></div>
+
   <script type="module">
-    // Позже здесь будет installDesktopBridge()
-    console.log("Poseidon renderer placeholder");
+    // В будущем здесь будет:
+    // import { installDesktopBridge, getDesktopAPI } from '../desktop-bridge';
+    // await installDesktopBridge();
+    // const api = await getDesktopAPI();
+
+    const statusEl = document.getElementById('status');
+    const detailsEl = document.getElementById('details');
+
+    // Честная заглушка. Когда bridge будет реально подключён — заменим.
+    statusEl.textContent = "Renderer placeholder is alive";
+    detailsEl.textContent = "desktop-bridge will be installed here • Gateway ownership policy is active in Rust";
+
+    console.log("[Poseidon] renderer-placeholder loaded");
   </script>
 </body>
 </html>
