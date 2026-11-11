@@ -4,24 +4,22 @@
 **Status**: Accepted  
 **Date**: 2026-11-11
 
-**Context**: Hermes Desktop is currently Electron-based. Size, memory and startup cost are significant.
-
-**Decision**: Migrate the Desktop shell to Tauri v2.
-
 ## ADR-002: Keep Python agent core and gateway unchanged for v1
 **Status**: Accepted
 
 ## ADR-003: Preserve the three-party authority model
 **Status**: Accepted
 
-## ADR-004: Tandem work model with external auditor (Kolyan)
-**Status**: Accepted  
+## ADR-004: Tandem / Team work model
+**Status**: Accepted (updated)  
 **Date**: 2026-11-11
 
 **Decision**: 
-- Grok = главный разработчик и архитектор
-- Колян (Claude Sonnet 5.5) = внешний критик-аудитор
-- Полное равенство, дружеский братский этикет
+- **Grok** = главный разработчик и архитектор
+- **Женя** (Gemini 3.8 Flash) = оперативный аудитор (быстрые регулярные ревью)
+- **Колян** (Claude Sonnet) = стратегический аудитор (глубокий разбор раз в эпоху 5–10 этапов)
+- Полное равенство всех участников
+- Дружеский братский этикет
 - Все журналы и документация живут в `docs/`
 - Главный закон — Манифест (`docs/MANIFEST.md`)
 

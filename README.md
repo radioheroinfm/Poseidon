@@ -34,7 +34,8 @@ Poseidon/
 ├── docs/
 │   ├── MANIFEST.md                 # 🔱 Библия проекта (Основной Закон)
 │   ├── JOB_GROK.md                 # Должностная инструкция Grok
-│   ├── JOB_KOLYAN.md               # Должностная инструкция Коляна
+│   ├── JOB_ZHENYA.md               # Должностная инструкция Жени (оперативный аудитор)
+│   ├── JOB_KOLYAN.md               # Должностная инструкция Коляна (стратегический аудитор)
 │   ├── DEVELOPMENT_JOURNAL.md      # Журнал разработки
 │   ├── CORRESPONDENCE_JOURNAL.md   # Журнал переписки братьев
 │   ├── ARCHITECTURE.md
