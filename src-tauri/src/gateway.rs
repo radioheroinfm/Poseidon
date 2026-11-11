@@ -5,13 +5,13 @@
 //! - Если обнаружили уже работающий — только attach, при выходе не трогаем.
 
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
 use log::{info, warn, error};
 
 /// Порт по умолчанию, на котором Hermes Gateway обычно слушает.
-/// TODO: сделать конфигурируемым и читать из реальных настроек Hermes.
 const DEFAULT_GATEWAY_PORT: u16 = 8642;
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -19,8 +19,8 @@ pub struct GatewayStatus {
     pub running: bool,
     pub pid: Option<u32>,
     pub owned_by_us: bool,
-    /// true = мы видим, что порт слушается (даже если процесс не наш)
     pub port_open: bool,
+    pub message: Option<String>,
 }
 
 pub struct GatewayManager {
@@ -38,21 +38,43 @@ impl GatewayManager {
         }
     }
 
-    /// Проверяет, открыт ли порт Gateway (простой TCP connect).
     fn is_port_open(&self) -> bool {
         TcpStream::connect_timeout(
             &format!("127.0.0.1:{}", self.port).parse().unwrap(),
-            Duration::from_millis(120),
+            Duration::from_millis(150),
         )
         .is_ok()
     }
 
-    /// Пытается запустить Gateway. Если порт уже слушается — attach.
+    /// Ищет бинарник/скрипт hermes в типичных местах.
+    fn find_hermes_binary() -> Option<PathBuf> {
+        // 1. Просто "hermes" из PATH
+        if which::which("hermes").is_ok() {
+            return Some(PathBuf::from("hermes"));
+        }
+
+        // 2. Типичные пользовательские места
+        if let Some(home) = dirs::home_dir() {
+            let candidates = [
+                home.join(".hermes/bin/hermes"),
+                home.join(".local/bin/hermes"),
+                home.join("hermes-agent/.venv/bin/hermes"),
+            ];
+            for path in candidates {
+                if path.exists() {
+                    return Some(path);
+                }
+            }
+        }
+
+        None
+    }
+
     pub fn start(&self) -> Result<GatewayStatus, String> {
         let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;
         let mut owned_guard = self.owned_by_us.lock().map_err(|e| e.to_string())?;
 
-        // 1. У нас уже есть живой owned-процесс?
+        // 1. Уже есть наш живой процесс?
         if let Some(child) = child_guard.as_mut() {
             match child.try_wait() {
                 Ok(None) => {
@@ -62,6 +84,7 @@ impl GatewayManager {
                         pid: Some(child.id()),
                         owned_by_us: true,
                         port_open: self.is_port_open(),
+                        message: Some("already running (owned)".into()),
                     });
                 }
                 Ok(Some(status)) => {
@@ -77,44 +100,82 @@ impl GatewayManager {
             }
         }
 
-        // 2. Порт уже кем-то слушается? → attach mode
+        // 2. Порт уже слушается → attach
         if self.is_port_open() {
-            info!(
-                "Gateway port {} is already open — attaching (will not kill on exit)",
-                self.port
-            );
+            info!("Gateway port {} is open — attaching (will not kill on exit)", self.port);
             *owned_guard = false;
             return Ok(GatewayStatus {
                 running: true,
-                pid: None, // мы не знаем pid чужого процесса (пока)
+                pid: None,
                 owned_by_us: false,
                 port_open: true,
+                message: Some("attached to existing gateway".into()),
             });
         }
 
-        // 3. Реальный запуск (пока честная заглушка)
-        info!("No gateway detected on port {}. Real spawn is not implemented yet (TODO)", self.port);
+        // 3. Пытаемся найти и запустить hermes
+        let hermes = match Self::find_hermes_binary() {
+            Some(path) => path,
+            None => {
+                let msg = "hermes binary not found in PATH or common locations".to_string();
+                warn!("{}", msg);
+                return Ok(GatewayStatus {
+                    running: false,
+                    pid: None,
+                    owned_by_us: false,
+                    port_open: false,
+                    message: Some(msg),
+                });
+            }
+        };
 
-        // Будущий код:
-        // let child = Command::new("hermes")
-        //     .arg("serve")
-        //     .stdout(Stdio::null())
-        //     .stderr(Stdio::null())
-        //     .spawn()
-        //     .map_err(|e| format!("Failed to start hermes serve: {}", e))?;
-        // let pid = child.id();
-        // *child_guard = Some(child);
-        // *owned_guard = true;
+        info!("Starting gateway via {:?}", hermes);
 
-        Ok(GatewayStatus {
-            running: false,
-            pid: None,
-            owned_by_us: false,
-            port_open: false,
-        })
+        let mut cmd = Command::new(&hermes);
+        cmd.arg("serve")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+
+        // На Unix стараемся создать новую process group, чтобы потом можно было гасить всё дерево
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            cmd.process_group(0);
+        }
+
+        match cmd.spawn() {
+            Ok(child) => {
+                let pid = child.id();
+                info!("Gateway spawned successfully (pid={})", pid);
+                *child_guard = Some(child);
+                *owned_guard = true;
+
+                // Даем немного времени на старт и проверяем порт
+                std::thread::sleep(Duration::from_millis(400));
+                let port_open = self.is_port_open();
+
+                Ok(GatewayStatus {
+                    running: true,
+                    pid: Some(pid),
+                    owned_by_us: true,
+                    port_open,
+                    message: Some("started by Poseidon".into()),
+                })
+            }
+            Err(e) => {
+                let msg = format!("Failed to spawn hermes: {}", e);
+                error!("{}", msg);
+                Ok(GatewayStatus {
+                    running: false,
+                    pid: None,
+                    owned_by_us: false,
+                    port_open: false,
+                    message: Some(msg),
+                })
+            }
+        }
     }
 
-    /// Останавливает Gateway только если он принадлежит нам.
     pub fn stop(&self) -> Result<GatewayStatus, String> {
         let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;
         let mut owned_guard = self.owned_by_us.lock().map_err(|e| e.to_string())?;
@@ -126,15 +187,26 @@ impl GatewayManager {
                 pid: None,
                 owned_by_us: false,
                 port_open: self.is_port_open(),
+                message: Some("not owned — left untouched".into()),
             });
         }
 
         if let Some(mut child) = child_guard.take() {
-            info!("Stopping owned gateway (pid={})", child.id());
-            // TODO: graceful SIGTERM
-            std::thread::sleep(Duration::from_millis(300));
+            let pid = child.id();
+            info!("Stopping owned gateway (pid={})", pid);
+
+            // Сначала пытаемся gracefully
+            #[cfg(unix)]
+            {
+                // Посылаем SIGTERM всей группе
+                unsafe {
+                    libc::kill(-(pid as i32), libc::SIGTERM);
+                }
+                std::thread::sleep(Duration::from_millis(450));
+            }
+
             match child.try_wait() {
-                Ok(Some(_)) => info!("Gateway exited"),
+                Ok(Some(_)) => info!("Gateway exited gracefully"),
                 _ => {
                     warn!("Gateway did not exit in time, killing");
                     let _ = child.kill();
@@ -150,6 +222,7 @@ impl GatewayManager {
             pid: None,
             owned_by_us: false,
             port_open: self.is_port_open(),
+            message: Some("stopped".into()),
         })
     }
 
@@ -175,6 +248,7 @@ impl GatewayManager {
             pid,
             owned_by_us: *owned_guard,
             port_open,
+            message: None,
         })
     }
 }
