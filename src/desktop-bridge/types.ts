@@ -63,9 +63,10 @@ export interface PoseidonDesktopAPI {
   openPath(path: string): Promise<void>;
 
   // --- Gateway / Agent process ---
-  gatewayStart(): Promise<{ ok: boolean; message?: string }>;
-  gatewayStop(): Promise<{ ok: boolean; message?: string }>;
-  gatewayStatus(): Promise<{ running: boolean; pid?: number }>;
+  // owned_by_us = true только если Desktop сам запустил этот процесс
+  gatewayStart(): Promise<{ running: boolean; pid?: number; owned_by_us: boolean }>;
+  gatewayStop(): Promise<{ running: boolean; pid?: number; owned_by_us: boolean }>;
+  gatewayStatus(): Promise<{ running: boolean; pid?: number; owned_by_us: boolean }>;
 
   // --- App ---
   getVersion(): Promise<string>;

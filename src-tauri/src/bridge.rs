@@ -1,10 +1,9 @@
 //! Tauri commands, которые вызываются из desktop-bridge.
-//!
-//! Имена команд специально короткие и стабильные.
-//! Менять их без крайней необходимости нельзя — это публичный контракт.
 
-use tauri::{AppHandle, Manager, Runtime};
+use crate::gateway::{GatewayManager, GatewayStatus};
+use tauri::{AppHandle, Manager, Runtime, State};
 use serde::Serialize;
+use std::sync::Mutex;
 
 #[derive(Debug, Serialize)]
 pub struct SystemInfo {
@@ -13,12 +12,6 @@ pub struct SystemInfo {
     pub version: String,
     pub tauri_version: String,
     pub is_tauri: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GatewayStatus {
-    pub running: bool,
-    pub pid: Option<u32>,
 }
 
 // ---------------------------------------------------------------------------
@@ -112,30 +105,29 @@ pub async fn quit_app<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
 }
 
 // ---------------------------------------------------------------------------
-// Gateway (пока заглушки — реальная логика в gateway.rs)
+// Gateway — теперь с политикой владения
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub async fn gateway_start() -> Result<GatewayStatus, String> {
-    // TODO: вызвать GatewayManager
-    Ok(GatewayStatus {
-        running: false,
-        pid: None,
-    })
+pub async fn gateway_start(
+    state: State<'_, Mutex<GatewayManager>>,
+) -> Result<GatewayStatus, String> {
+    let mgr = state.lock().map_err(|e| e.to_string())?;
+    mgr.start()
 }
 
 #[tauri::command]
-pub async fn gateway_stop() -> Result<GatewayStatus, String> {
-    Ok(GatewayStatus {
-        running: false,
-        pid: None,
-    })
+pub async fn gateway_stop(
+    state: State<'_, Mutex<GatewayManager>>,
+) -> Result<GatewayStatus, String> {
+    let mgr = state.lock().map_err(|e| e.to_string())?;
+    mgr.stop()
 }
 
 #[tauri::command]
-pub async fn gateway_status() -> Result<GatewayStatus, String> {
-    Ok(GatewayStatus {
-        running: false,
-        pid: None,
-    })
+pub async fn gateway_status(
+    state: State<'_, Mutex<GatewayManager>>,
+) -> Result<GatewayStatus, String> {
+    let mgr = state.lock().map_err(|e| e.to_string())?;
+    mgr.status()
 }

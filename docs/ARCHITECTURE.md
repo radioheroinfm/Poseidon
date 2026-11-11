@@ -1,4 +1,9 @@
-# Hermes Agent — Full Architecture Analysis
+# Hermes Agent — Architecture Analysis (Poseidon)
+
+> **Важно (честность по Манифесту)**  
+> Анализ выполнен на основе публичной документации и структуры репозитория [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) по состоянию на ноябрь 2026.  
+> Конкретный git-коммит апстрима, по которому сверялись детали `window.electronAPI` / `preload.ts`, **пока не зафиксирован** и помечен как `[НЕ ПРОВЕРЕНО ДО КОНЦА]`.  
+> Это будет закрыто отдельной задачей первой эпохи.
 
 **As of late 2026 (v0.23.x)**
 
