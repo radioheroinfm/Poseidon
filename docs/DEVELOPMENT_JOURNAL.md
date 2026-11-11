@@ -59,3 +59,22 @@
 - Начинаем создание каркаса Tauri-проекта и слоя bridge
 
 **Статус**: Фаза 0 закрыта. Официальный старт Фазы 1.
+
+### 2026-11-11 23:40 CET — Глубокая работа над bridge и GatewayManager
+
+**Что сделано (Grok):**
+
+**Frontend (desktop-bridge):**
+- Полностью описан контракт `PoseidonDesktopAPI` (types.ts) — максимально близко к реальному electronAPI Hermes
+- Реализован изоморфный слой: автоматически выбирает Tauri-реализацию или мок
+- `installDesktopBridge()` ставит API сразу в `window.electronAPI` и `window.poseidon`
+
+**Rust backend:**
+- Реализованы реальные `#[tauri::command]` для system, window controls, shell, app
+- `GatewayManager` написан сразу с RAII, проверкой живости процесса и заделом под graceful shutdown
+- Все команды зарегистрированы в `lib.rs`
+- Добавлены минимально необходимые файлы Tauri (`tauri.conf.json`, `build.rs` и т.д.)
+
+**Принцип**: пока ничего не притворяется готовым. Где заглушка — там честно написано TODO / mock.
+
+**Статус**: Есть твёрдый фундамент. Уже можно звать Женю на первый технический взгляд.
