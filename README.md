@@ -4,7 +4,9 @@
 
 > Turning the self-improving AI agent into a lean, native, high-performance system powered by Rust.
 
-![Poseidon Banner](assets/banner-cyber-vangogh-gaudi.png)
+![Poseidon Banner Wide](assets/banner-wide.png)
+
+![Poseidon Banner Portrait](assets/banner-portrait.png)
 
 ---
 
