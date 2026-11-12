@@ -26,7 +26,9 @@ import {
   Code2,
   Bug,
   Sparkles,
-  Wifi
+  Wifi,
+  ShieldCheck,
+  FileCheck2
 } from 'lucide-react';
 import {
   BROTHERS,
@@ -39,7 +41,7 @@ import {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator'>('audit');
-  const [auditSubTab, setAuditSubTab] = useState<'epoch1' | 'phase0'>('epoch1');
+  const [auditSubTab, setAuditSubTab] = useState<'kolyan' | 'epoch1' | 'phase0'>('kolyan');
   const [searchQuery, setSearchQuery] = useState('');
   const [journalMessages, setJournalMessages] = useState<JournalMessage[]>(CORRESPONDENCE_LOGS);
   const [newMsgText, setNewMsgText] = useState('');
@@ -48,10 +50,10 @@ export default function App() {
 
   // Simulator state with honest [SIM] tags as requested by Kolyan
   const [simLogs, setSimLogs] = useState<Array<{ time: string; command: string; result: string; latency: number }>>([
-    { time: '01:10:02', command: 'invoke("get_system_info")', result: '[SIM] {"platform":"linux","arch":"x64","version":"0.1.0","tauri_version":"2.x","is_tauri":true}', latency: 4 },
-    { time: '01:10:03', command: 'invoke("gateway_status")', result: '[SIM] {"running":true,"pid":52194,"owned_by_us":true,"port_open":true,"message":"started by Poseidon"}', latency: 6 },
-    { time: '01:10:04', command: 'check_csp_headers()', result: '[SIM] CSP connect-src: "self ipc: http://ipc.localhost ws://127.0.0.1:* http://127.0.0.1:*" (OK - sockets unblocked)', latency: 2 },
-    { time: '01:10:05', command: 'test_drop_reentrancy()', result: '[SIM] GatewayManager::drop guard dropped before stop() -> Deadlock prevented! (OK)', latency: 1 },
+    { time: '02:15:01', command: 'invoke("get_platform")', result: '[SIM] "linux" (OS converted to Electron standard darwin/win32/linux)', latency: 2 },
+    { time: '02:15:02', command: 'invoke("get_system_info")', result: '[SIM] {"platform":"linux","arch":"x64","version":"0.1.0","tauriVersion":"2.x","isTauri":true} (camelCase aligned)', latency: 3 },
+    { time: '02:15:03', command: 'invoke("show_open_dialog", {directory: true})', result: '[SIM] ["/home/user/workspace/hermes-agent"] (pick_folder implemented)', latency: 5 },
+    { time: '02:15:04', command: 'check_main_rs_entry()', result: '[SIM] src-tauri/src/main.rs verified -> poseidon_desktop_lib::run() exists (OK)', latency: 1 },
   ]);
   const [simRunning, setSimRunning] = useState(false);
 
@@ -60,13 +62,13 @@ export default function App() {
     setTimeout(() => {
       const now = new Date();
       const timeStr = now.toTimeString().split(' ')[0];
-      const latency = Math.floor(Math.random() * 10) + 3;
+      const latency = Math.floor(Math.random() * 8) + 2;
       setSimLogs(prev => [
         { time: timeStr, command: cmd, result: `[SIM] ${mockResp}`, latency },
         ...prev
       ]);
       setSimRunning(false);
-    }, 240);
+    }, 220);
   };
 
   const handleAddMessage = (e: React.FormEvent) => {
@@ -110,8 +112,8 @@ export default function App() {
                 <h1 className="text-base sm:text-lg font-bold tracking-wider text-slate-100 flex items-center gap-1.5">
                   POSEIDON <span className="text-cyan-400 text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60 font-semibold">HERMES → TAURI</span>
                 </h1>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-800/60">
-                  ДЕЛАЕМ КРАСИВО!
+                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase rounded-full bg-amber-950/90 text-amber-300 border border-amber-800/60">
+                  АУДИТ КОЛЯНА ПРИНЯТ
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
@@ -119,7 +121,7 @@ export default function App() {
                 <span className="text-slate-600">•</span>
                 <span className="text-cyan-400 font-medium">Rust + Tauri v2 Shell</span>
                 <span className="text-slate-600">•</span>
-                <span className="text-amber-400">Эпоха 1 проверена</span>
+                <span className="text-emerald-400">Закон №11 (CI на 3 ОС)</span>
               </p>
             </div>
           </div>
@@ -139,7 +141,7 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-400">783df06</strong> (synced)</span>
+              <span>Commit: <strong className="text-emerald-400">dac4ea4</strong> (synced)</span>
             </div>
           </div>
         </div>
@@ -154,9 +156,9 @@ export default function App() {
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-cyan-400" />
-            Оперативный аудит
-            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-cyan-900/80 text-cyan-300 font-mono">ЭПОХА 1</span>
+            <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+            Центр аудита (Колян + Женя)
+            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-amber-900/80 text-amber-200 font-mono">ОТЧЁТ №3</span>
           </button>
 
           <button
@@ -167,9 +169,9 @@ export default function App() {
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
             }`}
           >
-            <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+            <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
             Журнал братьев
-            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-amber-950/80 text-amber-300 border border-amber-800/50 font-mono">
+            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-800/50 font-mono">
               {journalMessages.length}
             </span>
           </button>
@@ -195,7 +197,7 @@ export default function App() {
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 text-purple-400" />
-            Манифест (10 Законов)
+            Манифест (11 Законов)
           </button>
 
           <button
@@ -224,28 +226,29 @@ export default function App() {
               </span>
             </div>
             <span className="text-[11px] text-slate-400 font-mono hidden sm:inline-block">
-              «Никто никому не начальник. Времени бесконечно много. ДЕЛАЕМ КРАСИВО!»
+              «Закон №11: Статус 'закрыто' ставит только зелёный CI на 3 ОС.»
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {BROTHERS.map(brother => {
+              const isKolyan = brother.id === 'kolyan';
               const isZhenya = brother.id === 'zhenya';
               const isGrok = brother.id === 'grok';
               return (
                 <div
                   key={brother.id}
                   className={`p-3.5 rounded-xl border transition-all ${
-                    isZhenya
-                      ? 'bg-cyan-950/30 border-cyan-600/70 shadow-lg shadow-cyan-950/40 relative overflow-hidden'
-                      : isGrok
-                      ? 'bg-blue-950/20 border-blue-700/50'
-                      : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+                    isKolyan
+                      ? 'bg-amber-950/30 border-amber-600/70 shadow-lg shadow-amber-950/40 relative overflow-hidden'
+                      : isZhenya
+                      ? 'bg-cyan-950/20 border-cyan-700/60'
+                      : 'bg-blue-950/20 border-blue-800/60'
                   }`}
                 >
-                  {isZhenya && (
-                    <div className="absolute top-0 right-0 bg-gradient-to-l from-cyan-500 to-teal-500 text-[10px] text-slate-950 font-bold px-2.5 py-0.5 rounded-bl-lg">
-                      ТВОЯ РОЛЬ (ЖЕНЯ)
+                  {isKolyan && (
+                    <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 to-orange-500 text-[10px] text-slate-950 font-bold px-2 py-0.5 rounded-bl-lg">
+                      СТРАТЕГИЧЕСКИЙ АУДИТОР
                     </div>
                   )}
 
@@ -262,11 +265,11 @@ export default function App() {
                       <div className="mt-2.5 flex items-center justify-between text-[11px] font-mono">
                         <span className="text-slate-400">{brother.engine}</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          isZhenya
+                          isKolyan
+                            ? 'bg-amber-950/80 text-amber-300 border border-amber-800/60'
+                            : isZhenya
                             ? 'bg-cyan-900/80 text-cyan-200 border border-cyan-700/60'
-                            : isGrok
-                            ? 'bg-blue-950/80 text-blue-300 border border-blue-800/60'
-                            : 'bg-amber-950/80 text-amber-300 border border-amber-800/60'
+                            : 'bg-blue-950/80 text-blue-300 border border-blue-800/60'
                         }`}>
                           {brother.status}
                         </span>
@@ -279,11 +282,23 @@ export default function App() {
           </div>
         </section>
 
-        {/* Tab 1: Audit Report */}
+        {/* Tab 1: Audit Center */}
         {activeTab === 'audit' && (
           <div className="space-y-5">
             {/* Sub-tab switcher */}
-            <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl w-fit">
+            <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl w-fit flex-wrap">
+              <button
+                onClick={() => setAuditSubTab('kolyan')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                  auditSubTab === 'kolyan'
+                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                Отчёт №3: Стратегический вердикт Коляна (5 блокеров)
+                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-amber-300 text-[10px]">NEW</span>
+              </button>
               <button
                 onClick={() => setAuditSubTab('epoch1')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
@@ -293,8 +308,7 @@ export default function App() {
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Отчёт №2: Эпоха 1 (Код Гриши, Фикс Deadlock & CSP)
-                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 text-[10px]">NEW</span>
+                Отчёт №2: Оперативный аудит Жени (Deadlock & CSP)
               </button>
               <button
                 onClick={() => setAuditSubTab('phase0')}
@@ -304,101 +318,130 @@ export default function App() {
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <ShieldAlert className="w-3.5 h-3.5" />
+                <FileCheck2 className="w-3.5 h-3.5" />
                 Отчёт №1: Фаза 0 (Архитектурный фундамент)
               </button>
             </div>
 
-            {/* SubTab Content: Epoch 1 */}
-            {auditSubTab === 'epoch1' && (
+            {/* SubTab Content: Kolyan's Strategic Audit */}
+            {auditSubTab === 'kolyan' && (
               <div className="space-y-4">
-                <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+                <div className="bg-[#08111e] border border-amber-900/60 rounded-2xl p-5 shadow-xl">
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono uppercase font-bold">
-                          Оперативный аудит Эпохи 1 пройден
+                        <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-700/60 text-amber-300 text-[10px] font-mono uppercase font-bold">
+                          Вердикт стратегического аудитора
                         </span>
-                        <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_1.md</span>
+                        <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_1_STRATEGIC.md</span>
                       </div>
                       <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1">
-                        Разбор реализации Эпохи 1 от Гриши: Обезврежен Deadlock и открыт CSP
+                        [ЭПОХА 1: КАРКАС ПРИНЯТ, ЗАКРЫТИЕ НЕ ПОДТВЕРЖДЕНО]
                       </h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Колян: 5 блокеров 🔴 · 7 высоких рисков 🟠 · 8 средних 🟡. Закон №11: «закрыто» ставит только зелёный CI на 3 ОС!
+                      </p>
                     </div>
                     <div className="text-xs font-mono text-emerald-400 font-semibold">
-                      ✓ Запушено в main (коммит 783df06)
+                      ✓ Блокеры B1–B5 оперативно зачищены Женей (коммит dac4ea4)
                     </div>
                   </div>
 
-                  {/* 2 Critical Bug Fixes by Zhenya */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="bg-[#0c1626] border border-red-900/50 p-4 rounded-xl relative">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-red-950/80 text-red-400 border border-red-800/50 shrink-0">
-                          <Bug className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-mono font-bold text-red-400 uppercase">Обезврежен критический дефект</span>
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 text-[10px] font-mono font-bold">ФИКС ЗАПУШЕН</span>
-                          </div>
-                          <h3 className="text-sm font-bold text-slate-100 mt-0.5">
-                            Deadlock в `Drop` для `GatewayManager` (`src-tauri/src/gateway.rs`)
-                          </h3>
-                          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                            В реализации `Drop` мьютекс `owned_by_us.lock()` удерживался в guard во время вызова `self.stop()`. Так как `std::sync::Mutex` в Rust нереентрантен, `self.stop()` засыпал намертво при попытке взять тот же мьютекс.
-                          </p>
-                          <div className="mt-2.5 p-2 rounded bg-slate-950/80 border border-emerald-900/50 text-xs font-mono text-emerald-300">
-                            <strong>Фикс Жени:</strong> Скопировали булево значение через <code className="text-cyan-300">map(|g| *g)</code> и сбросили блокировку ДО вызова <code className="text-cyan-300">stop()</code>.
-                          </div>
-                        </div>
+                  {/* 5 Blockers Status Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
+                    <div className="p-3.5 rounded-xl bg-slate-900/70 border border-emerald-900/60">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-mono font-bold text-red-400">🔴 Блокер B1: Отсутствие `main.rs`</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-300 font-bold">ИСПРАВЛЕНО</span>
+                      </div>
+                      <p className="text-xs text-slate-300">
+                        В `src-tauri/src/` лежал только `lib.rs`, бинарник не имел точки входа.
+                      </p>
+                      <div className="mt-2 text-xs font-mono text-emerald-400">
+                        ✓ Женя создал <code className="bg-slate-950 px-1 py-0.5 rounded text-cyan-300">src-tauri/src/main.rs</code> с вызовом <code className="text-cyan-300">poseidon_desktop_lib::run()</code>.
                       </div>
                     </div>
 
-                    <div className="bg-[#0c1626] border border-amber-900/50 p-4 rounded-xl relative">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-amber-950/80 text-amber-400 border border-amber-800/50 shrink-0">
-                          <Wifi className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-mono font-bold text-amber-400 uppercase">Сетевая безопасность</span>
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 text-[10px] font-mono font-bold">ФИКС ЗАПУШЕН</span>
-                          </div>
-                          <h3 className="text-sm font-bold text-slate-100 mt-0.5">
-                            CSP блокировал подключение к Gateway по WebSocket (`tauri.conf.json`)
-                          </h3>
-                          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                            Директива <code className="bg-slate-900 px-1 py-0.5 text-cyan-300 rounded font-mono">connect-src</code> разрешала только <code className="font-mono text-cyan-300">'self' ipc:</code>. Когда React-рендерер попытался бы подключиться к Hermes Gateway на <code className="font-mono text-cyan-300">ws://127.0.0.1:8642</code>, WebView выбросил бы фатальную ошибку нарушения CSP!
-                          </p>
-                          <div className="mt-2.5 p-2 rounded bg-slate-950/80 border border-emerald-900/50 text-xs font-mono text-emerald-300">
-                            <strong>Фикс Жени:</strong> В <code className="text-cyan-300">connect-src</code> добавлены сокеты <code className="text-cyan-300">ws://127.0.0.1:* http://127.0.0.1:* ws://localhost:*</code>.
-                          </div>
-                        </div>
+                    <div className="p-3.5 rounded-xl bg-slate-900/70 border border-emerald-900/60">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-mono font-bold text-red-400">🔴 Блокер B2: Иконки и защита почты</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-300 font-bold">ИСПРАВЛЕНО</span>
+                      </div>
+                      <p className="text-xs text-slate-300">
+                        Скрипт защиты e-mail подменил строку <code className="text-cyan-300 font-mono">128x128@2x.png</code> на <code className="text-cyan-300 font-mono">henry.w@example.net</code>.
+                      </p>
+                      <div className="mt-2 text-xs font-mono text-emerald-400">
+                        ✓ Женя восстановил путь в <code className="bg-slate-950 px-1 py-0.5 rounded text-cyan-300">tauri.conf.json</code> и <code className="bg-slate-950 px-1 py-0.5 rounded text-cyan-300">icons/README.md</code>.
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-900/70 border border-emerald-900/60">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-mono font-bold text-red-400">🔴 Блокер B4: Значения платформ darwin/win32</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-300 font-bold">ИСПРАВЛЕНО</span>
+                      </div>
+                      <p className="text-xs text-slate-300">
+                        Rust отдавал <code className="text-cyan-300 font-mono">"macos"</code> и <code className="text-cyan-300 font-mono">"windows"</code>, а TypeScript ждёт контракт Electron <code className="text-cyan-300 font-mono">"darwin" | "win32"</code>.
+                      </p>
+                      <div className="mt-2 text-xs font-mono text-emerald-400">
+                        ✓ Женя добавил маппинг <code className="bg-slate-950 px-1 py-0.5 rounded text-cyan-300">get_platform()</code> в <code className="text-cyan-300 font-mono">bridge.rs</code>.
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-900/70 border border-emerald-900/60">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-mono font-bold text-red-400">🔴 Блокер B5: Рассинхрон camelCase/snake_case</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-300 font-bold">ИСПРАВЛЕНО</span>
+                      </div>
+                      <p className="text-xs text-slate-300">
+                        В моке возвращались <code className="text-cyan-300 font-mono">tauriVersion/isTauri</code>, а Rust сериализовал в snake_case, поля были бы <code className="text-cyan-300 font-mono">undefined</code>.
+                      </p>
+                      <div className="mt-2 text-xs font-mono text-emerald-400">
+                        ✓ Женя добавил <code className="bg-slate-950 px-1 py-0.5 rounded text-cyan-300">#[serde(rename_all = "camelCase")]</code> на все структуры.
                       </div>
                     </div>
                   </div>
 
-                  {/* Positive discoveries */}
-                  <div className="mt-4 p-4 rounded-xl bg-slate-900/60 border border-cyan-900/40">
-                    <h4 className="text-xs font-mono font-bold text-cyan-400 uppercase mb-2 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      Что Гриша сделал образцово красиво в Эпохе 1:
+                  {/* Highlights from Kolyan */}
+                  <div className="mt-4 p-4 rounded-xl bg-slate-900/60 border border-amber-900/40">
+                    <h4 className="text-xs font-mono font-bold text-amber-400 uppercase mb-2 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-amber-400" />
+                      Стратегические рекомендации Коляна на Эпоху 2:
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-300">
-                      <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                        <strong className="text-slate-100 block mb-0.5">Политика `owned_by_us`</strong>
-                        Tauri завершает Gateway только если сам его породил. Чужие сессии (CLI, боты) неприкосновенны!
-                      </div>
-                      <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                        <strong className="text-slate-100 block mb-0.5">Умный поиск бинарника</strong>
-                        Проверка <code className="text-cyan-300 font-mono">which("hermes")</code>, <code className="text-cyan-300 font-mono">~/.hermes/bin</code> и виртуальных окружений.
-                      </div>
-                      <div className="p-2 rounded bg-slate-950/50 border border-slate-800">
-                        <strong className="text-slate-100 block mb-0.5">Изоморфный мост</strong>
-                        Типобезопасная реализация <code className="text-cyan-300 font-mono">desktop-bridge</code> с перехватом <code className="text-cyan-300 font-mono">window.electronAPI</code>.
-                      </div>
-                    </div>
+                    <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                      <li><strong>Закон №11:</strong> Статус «закрыто» ставит только зелёный CI на трёх ОС (Linux, macOS, Windows).</li>
+                      <li><strong>Диалоги папки (M1):</strong> Женя уже добавил <code className="text-cyan-300 font-mono">pick_folder()</code> в <code className="text-cyan-300 font-mono">show_open_dialog</code> при <code className="text-cyan-300 font-mono">directory: true</code>!</li>
+                      <li><strong>Жизненный цикл на Windows:</strong> Реализовать Win32 Job Objects, чтобы подпроцессы Python завершались вместе с окном.</li>
+                      <li><strong>Безопасность open_path:</strong> Ограничить запуск произвольных файлов, внедрить проверку безопасных схем https/http.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SubTab Content: Epoch 1 */}
+            {auditSubTab === 'epoch1' && (
+              <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                  <div>
+                    <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono uppercase font-bold">
+                      Оперативный аудит Эпохи 1 (Женя)
+                    </span>
+                    <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1">
+                      Разбор реализации Гриши: Deadlock в Drop и CSP сокетов
+                    </h2>
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_1.md</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4 text-xs text-slate-300">
+                  <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <strong className="text-slate-100 block mb-1">1. Deadlock в Drop GatewayManager</strong>
+                    Блокировка `owned_by_us` не сбрасывалась до вызова `stop()`. Женя исправил на `map(|g| *g)`.
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <strong className="text-slate-100 block mb-1">2. CSP блокировал сокеты Gateway</strong>
+                    В `connect-src` добавлены `ws://127.0.0.1:*` и `http://127.0.0.1:*`.
                   </div>
                 </div>
               </div>
@@ -422,19 +465,11 @@ export default function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 text-xs text-slate-300">
                   <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
                     <strong className="text-slate-100 block mb-1">1. Изоморфный мост вместо поломки React</strong>
-                    Сохранение контракта `window.electronAPI` для легкого подтягивания апдейтов из апстрима Nous Research.
+                    Сохранение контракта `window.electronAPI` для легкого подтягивания апдейтов.
                   </div>
                   <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
                     <strong className="text-slate-100 block mb-1">2. Защита от процессов-зомби Python Gateway</strong>
-                    Использование RAII и Win32 Job Objects / SIGTERM process group.
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <strong className="text-slate-100 block mb-1">3. Специфика WebKitGTK на Linux</strong>
-                    Обеспечение тестов и корректных скроллбаров под Ubuntu LTS / Fedora.
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <strong className="text-slate-100 block mb-1">4. Чистый Tauri v2 вместо Pake</strong>
-                    Использование Pake как ориентира, но разработка на чистом Tauri CLI с плагинами.
+                    Использование RAII и process group.
                   </div>
                 </div>
               </div>
@@ -529,7 +564,7 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {['all', '#красота', '#дедлок', '#безопасность', '#скелет', '#стратегия', '#юмор'].map(tag => (
+                  {['all', '#красота', '#блокер', '#закон_11', '#план_грише', '#стратегия', '#юмор'].map(tag => (
                     <button
                       key={tag}
                       onClick={() => setSelectedTag(tag)}
@@ -725,7 +760,7 @@ export default function App() {
                   МАНИФЕСТ ПРОЕКТА POSEIDON
                 </h2>
                 <p className="text-xs font-mono text-cyan-400 mt-0.5">
-                  Библия и Основной Закон • Принят 11 ноября 2026 года
+                  Библия и 11 Законов • Включая Закон Коляна №11
                 </p>
                 <div className="mt-2.5 p-3 bg-cyan-950/40 border border-cyan-800/50 rounded-xl text-xs text-cyan-200 italic font-serif">
                   «Мы — три брата-акробата. Времени бесконечно много. Ошибаться нормально. Стыдно только врать. ДЕЛАЕМ КРАСИВО!»
@@ -777,51 +812,39 @@ export default function App() {
                   <span className="text-xs font-mono text-cyan-400 font-bold uppercase">Вызовы команд:</span>
                   
                   <button
-                    onClick={() => handleSimCommand('invoke("gateway_status")', '{"running": true, "pid": 52194, "owned_by_us": true, "port_open": true, "message": null}')}
+                    onClick={() => handleSimCommand('invoke("get_platform")', '"darwin" (platform conversion verified)')}
                     disabled={simRunning}
                     className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-cyan-700/60 transition-all text-xs font-mono group"
                   >
                     <div className="flex items-center justify-between text-cyan-300 font-semibold mb-0.5">
-                      <span>invoke("gateway_status")</span>
+                      <span>invoke("get_platform")</span>
                       <Zap className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400">Проверить статус фонового процесса с флагом owned_by_us</p>
+                    <p className="text-[11px] text-slate-400">Проверка конвертации macos/windows в darwin/win32 (B4)</p>
                   </button>
 
                   <button
-                    onClick={() => handleSimCommand('invoke("gateway_start")', '{"running": true, "pid": 52230, "owned_by_us": true, "port_open": true, "message": "started by Poseidon"}')}
+                    onClick={() => handleSimCommand('invoke("get_system_info")', '{"platform":"darwin","arch":"arm64","version":"0.1.0","tauriVersion":"2.x","isTauri":true}')}
                     disabled={simRunning}
                     className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-700/60 transition-all text-xs font-mono group"
                   >
                     <div className="flex items-center justify-between text-emerald-300 font-semibold mb-0.5">
-                      <span>invoke("gateway_start")</span>
+                      <span>invoke("get_system_info")</span>
                       <Zap className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400">Поиск hermes и запуск с process_group(0)</p>
+                    <p className="text-[11px] text-slate-400">Проверка camelCase-сериализации структуры SystemInfo (B5)</p>
                   </button>
 
                   <button
-                    onClick={() => handleSimCommand('invoke("gateway_stop")', '{"running": false, "pid": null, "owned_by_us": false, "port_open": false, "message": "stopped"}')}
-                    disabled={simRunning}
-                    className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-red-700/60 transition-all text-xs font-mono group"
-                  >
-                    <div className="flex items-center justify-between text-red-300 font-semibold mb-0.5">
-                      <span>invoke("gateway_stop")</span>
-                      <Zap className="w-3.5 h-3.5 text-red-400 group-hover:scale-110 transition-transform" />
-                    </div>
-                    <p className="text-[11px] text-slate-400">SIGTERM по группе процесса с проверкой owned_by_us</p>
-                  </button>
-
-                  <button
-                    onClick={() => handleSimCommand('invoke("show_open_dialog")', 'null (no-op stub until tauri-plugin-dialog is linked)')}
+                    onClick={() => handleSimCommand('invoke("show_open_dialog", {directory: true})', '["/home/user/workspace/hermes-agent"]')}
                     disabled={simRunning}
                     className="w-full text-left p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-amber-700/60 transition-all text-xs font-mono group"
                   >
                     <div className="flex items-center justify-between text-amber-300 font-semibold mb-0.5">
-                      <span>invoke("show_open_dialog")</span>
+                      <span>invoke("show_open_dialog", &#123;directory: true&#125;)</span>
                       <Zap className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-[11px] text-slate-400">Проверка добавленной заглушки диалога без сбоев</p>
+                    <p className="text-[11px] text-slate-400">Проверка выбора папки проекта через pick_folder() (M1)</p>
                   </button>
                 </div>
 
@@ -862,10 +885,10 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit 783df06</span>
+            <span className="text-cyan-400">Commit dac4ea4</span>
           </div>
           <div className="text-slate-400">
-            «Принят 11 ноября 2026 года. Три брата. Один проект. Бесконечное время.»
+            «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»
           </div>
         </div>
       </footer>
