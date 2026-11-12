@@ -1,3 +1,23 @@
+
+## Upstream reality check (2026-11-12)
+
+Сверка с [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) `main`:
+
+| Тема | Факт |
+|------|------|
+| Preload path | `apps/desktop/electron/preload.ts` |
+| Renderer API | **`window.hermesDesktop`** (не `electronAPI`) |
+| Backend ready | stdout: `HERMES_BACKEND_READY port=<N>` |
+| Cold start | до 30–60s |
+| Port | динамический (анонс в READY), не hardcode |
+
+Подробности: [`docs/upstream/FINDINGS_2026-11-12.md`](./upstream/FINDINGS_2026-11-12.md)
+
+Poseidon Desktop в Эпохе 2 закрывает нативный shell + lifecycle шлюза.  
+Полный паритет огромного `hermesDesktop` API — Эпоха 3+.
+
+---
+
 # Hermes Agent — Architecture Analysis (Poseidon)
 
 > **Важно (честность по Манифесту)**  

@@ -291,3 +291,10 @@ Spawn больше не заглушка. Если `hermes` есть в сист
 - Attach по порту и ownership policy сохранены
 
 Это закрывает главный пробел после сверки с апстримом.
+
+### 2026-11-12 — Exit hook + architecture upstream section
+
+**Что сделано (Grok):**
+- На `RunEvent::Exit` вызывается `gateway.stop()` только для owned-процесса
+- `ARCHITECTURE.md` дополнен блоком Upstream reality check
+- В types.ts зафиксирована стратегия minimal subset `hermesDesktop` (полный паритет = Эпоха 3+)

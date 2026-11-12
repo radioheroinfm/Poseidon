@@ -1,6 +1,6 @@
 //! Poseidon Desktop — Tauri backend
 //!
-//! Эпоха 1: фундамент оболочки.
+//! Epoch 2: buildable foundation + upstream-aligned gateway lifecycle.
 
 mod bridge;
 mod gateway;
@@ -8,6 +8,7 @@ mod gateway;
 use bridge::*;
 use gateway::GatewayManager;
 use std::sync::Mutex;
+use tauri::RunEvent;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -41,9 +42,25 @@ pub fn run() {
             gateway_status,
         ])
         .setup(|_app| {
-            log::info!("🔱 Poseidon Desktop v{} — Epoch 1 foundation ready", env!("CARGO_PKG_VERSION"));
+            log::info!(
+                "🔱 Poseidon Desktop v{} — Epoch 2",
+                env!("CARGO_PKG_VERSION")
+            );
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running Poseidon Desktop");
+        .build(tauri::generate_context!())
+        .expect("error while building Poseidon Desktop")
+        .run(|app, event| {
+            // On exit: stop only the gateway we own (ADR-009)
+            if let RunEvent::Exit = event {
+                if let Some(state) = app.try_state::<Mutex<GatewayManager>>() {
+                    if let Ok(mgr) = state.lock() {
+                        match mgr.stop() {
+                            Ok(status) => log::info!("Exit cleanup: {:?}", status.message),
+                            Err(e) => log::warn!("Exit cleanup error: {}", e),
+                        }
+                    }
+                }
+            }
+        });
 }

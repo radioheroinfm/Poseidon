@@ -1,10 +1,17 @@
 /**
  * Poseidon Desktop Bridge — Types
- * 
- * Контракт, максимально близкий к реальному window.electronAPI
- * из hermes-agent/apps/desktop (preload.ts).
- * 
- * Цель: React-рендерер Hermes почти ничего не должен заметить.
+ *
+ * Upstream Hermes exposes a large `window.hermesDesktop` API
+ * (apps/desktop/electron/preload.ts, 760+ lines).
+ *
+ * Epoch 2 strategy: implement a **minimal viable subset** needed for:
+ * - window controls (custom titlebar)
+ * - system/platform info
+ * - gateway lifecycle (start/stop/status)
+ * - open external / path / dialogs
+ *
+ * Full parity with hermesDesktop is Epoch 3+.
+ * See docs/upstream/FINDINGS_2026-11-12.md
  */
 
 export type Platform = 'darwin' | 'win32' | 'linux';
