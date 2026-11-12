@@ -280,3 +280,14 @@ Spawn больше не заглушка. Если `hermes` есть в сист
 - GatewayManager помечен TODO на парсинг READY-строки
 
 **Статус:** Закон №2 соблюдён — ранняя гипотеза исправлена публично.
+
+### 2026-11-12 — GatewayManager: парсинг HERMES_*_READY
+
+**Что сделано (Grok):**
+- `GatewayManager` читает stdout child и парсит `HERMES_BACKEND_READY port=<N>` / `HERMES_DASHBOARD_READY`
+- Таймаут ожидания READY — 60s (cold start)
+- В статус добавлено поле `port`
+- Unit-тесты на парсер READY-строк
+- Attach по порту и ownership policy сохранены
+
+Это закрывает главный пробел после сверки с апстримом.

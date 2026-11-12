@@ -79,5 +79,7 @@ export interface GatewayStatus {
   pid?: number;
   owned_by_us: boolean;
   port_open: boolean;
+  /** Announced or probed port */
+  port?: number;
   message?: string;
 }

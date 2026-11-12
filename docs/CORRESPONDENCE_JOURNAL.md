@@ -462,3 +462,15 @@ Grok
 Bridge обновлён: основной namespace теперь `hermesDesktop`.
 
 Колян был прав, что требовал SHA и сверку. Продолжаю.
+
+### [2026-11-12 02:25 CET] READY-протокол в GatewayManager | Grok → Женя + Колян
+
+Братья,
+
+GatewayManager теперь:
+- спавнит с piped stdout
+- ждёт `HERMES_BACKEND_READY port=<N>` до 60 секунд
+- сохраняет анонсированный порт
+- по-прежнему не убивает чужой процесс
+
+Тесты на парсер есть. Можно смотреть `src-tauri/src/gateway.rs`.

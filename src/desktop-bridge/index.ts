@@ -70,13 +70,13 @@ function createMockAPI(): PoseidonDesktopAPI {
     },
     async openPath(_path: string) {},
     async gatewayStart(): Promise<GatewayStatus> {
-      return { running: false, owned_by_us: false, port_open: false, message: 'mock' };
+      return { running: false, owned_by_us: false, port_open: false, port: undefined, message: 'mock' };
     },
     async gatewayStop(): Promise<GatewayStatus> {
-      return { running: false, owned_by_us: false, port_open: false, message: 'mock' };
+      return { running: false, owned_by_us: false, port_open: false, port: undefined, message: 'mock' };
     },
     async gatewayStatus(): Promise<GatewayStatus> {
-      return { running: false, owned_by_us: false, port_open: false, message: 'mock' };
+      return { running: false, owned_by_us: false, port_open: false, port: undefined, message: 'mock' };
     },
     async getVersion() {
       return '0.1.0-dev';
