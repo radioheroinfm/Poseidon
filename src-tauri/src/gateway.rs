@@ -151,16 +151,28 @@ impl GatewayManager {
                 *child_guard = Some(child);
                 *owned_guard = true;
 
-                // Даем немного времени на старт и проверяем порт
-                std::thread::sleep(Duration::from_millis(400));
-                let port_open = self.is_port_open();
+                // Ждём готовности порта (до ~3с), а не один слепой sleep
+                let mut port_open = false;
+                for _ in 0..15 {
+                    std::thread::sleep(Duration::from_millis(200));
+                    if self.is_port_open() {
+                        port_open = true;
+                        break;
+                    }
+                }
+
+                let message = if port_open {
+                    "started by Poseidon (port open)".into()
+                } else {
+                    "started by Poseidon (port not yet open — still starting?)".into()
+                };
 
                 Ok(GatewayStatus {
                     running: true,
                     pid: Some(pid),
                     owned_by_us: true,
                     port_open,
-                    message: Some("started by Poseidon".into()),
+                    message: Some(message),
                 })
             }
             Err(e) => {

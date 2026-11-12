@@ -46,8 +46,8 @@
 - [ ] Обновить `ARCHITECTURE.md` с конкретной версией
 
 ### Шаг 4 — Безопасность (высокие риски H4–H6)
-- [ ] ADR «Security model»
-- [ ] Валидация `open_external` / `open_path`
+- [x] ADR «Security model» (ADR-013)
+- [x] Валидация `open_external` / `open_path`
 - [ ] Ужесточение CSP (убрать `unsafe-inline` где возможно, конкретный порт вместо wildcard)
 - [ ] `withGlobalTauri: false` если возможно
 - [ ] Идентификация шлюза при attach (не только «порт открыт»)

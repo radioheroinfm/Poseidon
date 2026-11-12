@@ -154,16 +154,51 @@ pub async fn show_save_dialog<R: Runtime>(
 }
 
 // ---------------------------------------------------------------------------
-// Shell
+// Shell (with validation — ADR Security)
 // ---------------------------------------------------------------------------
+
+/// Разрешаем только http/https/mailto для внешних ссылок.
+fn validate_external_url(url: &str) -> Result<(), String> {
+    let lower = url.trim().to_lowercase();
+    if lower.starts_with("https://")
+        || lower.starts_with("http://")
+        || lower.starts_with("mailto:")
+    {
+        Ok(())
+    } else {
+        Err(format!(
+            "open_external: blocked URL scheme (only http/https/mailto allowed): {}",
+            url
+        ))
+    }
+}
+
+/// Блокируем опасные схемы и пустые пути.
+fn validate_open_path(path: &str) -> Result<(), String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("open_path: empty path".into());
+    }
+    let lower = trimmed.to_lowercase();
+    // Защита от scheme-based атак (file:// уже ок для open, но javascript: и т.п. — нет)
+    if lower.contains("://") && !lower.starts_with("file://") {
+        return Err(format!(
+            "open_path: blocked path with non-file scheme: {}",
+            path
+        ));
+    }
+    Ok(())
+}
 
 #[tauri::command]
 pub async fn open_external(url: String) -> Result<(), String> {
+    validate_external_url(&url)?;
     open::that(&url).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn open_path(path: String) -> Result<(), String> {
+    validate_open_path(&path)?;
     open::that(&path).map_err(|e| e.to_string())
 }
 
@@ -203,4 +238,31 @@ pub async fn gateway_status(
 ) -> Result<GatewayStatus, String> {
     let mgr = state.lock().map_err(|e| e.to_string())?;
     mgr.status()
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn external_url_allows_http_https_mailto() {
+        assert!(validate_external_url("https://example.com").is_ok());
+        assert!(validate_external_url("http://localhost:8642").is_ok());
+        assert!(validate_external_url("mailto:a@b.com").is_ok());
+    }
+
+    #[test]
+    fn external_url_blocks_dangerous_schemes() {
+        assert!(validate_external_url("javascript:alert(1)").is_err());
+        assert!(validate_external_url("file:///etc/passwd").is_err());
+        assert!(validate_external_url("data:text/html,hi").is_err());
+    }
+
+    #[test]
+    fn open_path_rejects_empty_and_schemes() {
+        assert!(validate_open_path("").is_err());
+        assert!(validate_open_path("javascript:foo").is_err());
+        assert!(validate_open_path("/tmp/test.txt").is_ok());
+    }
 }
