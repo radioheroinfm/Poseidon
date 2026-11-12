@@ -6,7 +6,8 @@ use tauri_plugin_dialog::{DialogExt, FilePath};
 use serde::Serialize;
 use std::sync::Mutex;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemInfo {
     pub platform: String,
     pub arch: String,
@@ -16,6 +17,7 @@ pub struct SystemInfo {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OpenDialogOptions {
     pub title: Option<String>,
     pub default_path: Option<String>,
@@ -24,6 +26,7 @@ pub struct OpenDialogOptions {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SaveDialogOptions {
     pub title: Option<String>,
     pub default_path: Option<String>,
@@ -36,7 +39,7 @@ pub struct SaveDialogOptions {
 #[tauri::command]
 pub fn get_system_info() -> SystemInfo {
     SystemInfo {
-        platform: std::env::consts::OS.to_string(),
+        platform: get_platform(),
         arch: std::env::consts::ARCH.to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         tauri_version: tauri::VERSION.to_string(),
@@ -46,7 +49,11 @@ pub fn get_system_info() -> SystemInfo {
 
 #[tauri::command]
 pub fn get_platform() -> String {
-    std::env::consts::OS.to_string()
+    match std::env::consts::OS {
+        "macos" => "darwin".to_string(),
+        "windows" => "win32".to_string(),
+        other => other.to_string(),
+    }
 }
 
 #[tauri::command]
@@ -115,12 +122,14 @@ pub async fn show_open_dialog<R: Runtime>(
         }
     }
 
-    // Упрощённо: один файл. multiple/directory можно расширить позже.
-    let result = builder.blocking_pick_file();
-
-    Ok(result.map(|path: FilePath| {
-        vec![path.to_string()]
-    }))
+    let is_dir = options.as_ref().and_then(|o| o.directory).unwrap_or(false);
+    if is_dir {
+        let result = builder.blocking_pick_folder();
+        Ok(result.map(|path: FilePath| vec![path.to_string()]))
+    } else {
+        let result = builder.blocking_pick_file();
+        Ok(result.map(|path: FilePath| vec![path.to_string()]))
+    }
 }
 
 #[tauri::command]

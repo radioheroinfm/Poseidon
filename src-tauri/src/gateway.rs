@@ -14,7 +14,8 @@ use log::{info, warn, error};
 /// Порт по умолчанию, на котором Hermes Gateway обычно слушает.
 const DEFAULT_GATEWAY_PORT: u16 = 8642;
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GatewayStatus {
     pub running: bool,
     pub pid: Option<u32>,
