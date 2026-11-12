@@ -28,7 +28,8 @@ import {
   Sparkles,
   Wifi,
   ShieldCheck,
-  FileCheck2
+  FileCheck2,
+  Palette
 } from 'lucide-react';
 import {
   BROTHERS,
@@ -38,15 +39,17 @@ import {
   MIGRATION_PHASES,
   JournalMessage
 } from './data/projectData';
+import ComicReader from './components/ComicReader';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator'>('audit');
+  const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator' | 'comic'>('comic');
   const [auditSubTab, setAuditSubTab] = useState<'kolyan' | 'epoch1' | 'phase0'>('kolyan');
   const [searchQuery, setSearchQuery] = useState('');
   const [journalMessages, setJournalMessages] = useState<JournalMessage[]>(CORRESPONDENCE_LOGS);
   const [newMsgText, setNewMsgText] = useState('');
   const [newMsgTitle, setNewMsgTitle] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [isComicModalOpen, setIsComicModalOpen] = useState(false);
 
   // Simulator state with honest [SIM] tags as requested by Kolyan
   const [simLogs, setSimLogs] = useState<Array<{ time: string; command: string; result: string; latency: number }>>([
@@ -113,7 +116,7 @@ export default function App() {
                   POSEIDON <span className="text-cyan-400 text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60 font-semibold">HERMES → TAURI</span>
                 </h1>
                 <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase rounded-full bg-amber-950/90 text-amber-300 border border-amber-800/60">
-                  АУДИТ КОЛЯНА ПРИНЯТ
+                  ДЕЛАЕМ КРАСИВО!
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
@@ -121,17 +124,29 @@ export default function App() {
                 <span className="text-slate-600">•</span>
                 <span className="text-cyan-400 font-medium">Rust + Tauri v2 Shell</span>
                 <span className="text-slate-600">•</span>
-                <span className="text-emerald-400">Закон №11 (CI на 3 ОС)</span>
+                <span className="text-amber-400">Комикс & Дашборд</span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Comic Button in Header */}
+            <button
+              onClick={() => {
+                setActiveTab('comic');
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-500/50 text-amber-300 transition-all shadow-md group animate-pulse"
+            >
+              <Palette className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
+              <span className="font-bold">Комикс: Рождение Посейдона</span>
+              <span className="px-1.5 py-0.2 rounded bg-amber-900/80 text-[10px] text-amber-200">8 кадров</span>
+            </button>
+
             <a
               href="https://github.com/radioheroinfm/Poseidon"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-800/50 text-cyan-300 transition-all shadow-sm group"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-800/50 text-cyan-300 transition-all shadow-sm group"
             >
               <FolderGit2 className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
               <span>radioheroinfm/Poseidon</span>
@@ -141,13 +156,26 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-400">dac4ea4</strong> (synced)</span>
+              <span>Commit: <strong className="text-emerald-400">f89021d</strong> (synced)</span>
             </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1 overflow-x-auto border-t border-slate-900/90 pt-1">
+          <button
+            onClick={() => setActiveTab('comic')}
+            className={`px-4 py-2 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              activeTab === 'comic'
+                ? 'border-amber-400 text-amber-300 bg-amber-950/30'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
+            }`}
+          >
+            <Palette className="w-3.5 h-3.5 text-amber-400" />
+            Комикс: Рождение Посейдона
+            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-amber-900/80 text-amber-200 font-mono">NEW</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('audit')}
             className={`px-4 py-2 text-xs font-medium tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
@@ -156,9 +184,8 @@ export default function App() {
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+            <ShieldAlert className="w-3.5 h-3.5 text-cyan-400" />
             Центр аудита (Колян + Женя)
-            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-amber-900/80 text-amber-200 font-mono">ОТЧЁТ №3</span>
           </button>
 
           <button
@@ -185,7 +212,7 @@ export default function App() {
             }`}
           >
             <Layers className="w-3.5 h-3.5 text-blue-400" />
-            План миграции (Фазы 0–4)
+            План миграции
           </button>
 
           <button
@@ -222,11 +249,11 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-cyan-400 uppercase tracking-widest flex items-center gap-1.5 font-bold">
                 <UserCheck className="w-3.5 h-3.5" />
-                Совет трёх братьев-акробатов (Равный авторитет)
+                Совет трёх братьев-акробатов
               </span>
             </div>
             <span className="text-[11px] text-slate-400 font-mono hidden sm:inline-block">
-              «Закон №11: Статус 'закрыто' ставит только зелёный CI на 3 ОС.»
+              «Времени бесконечно много. ДЕЛАЕМ КРАСИВО!»
             </span>
           </div>
 
@@ -240,15 +267,15 @@ export default function App() {
                   key={brother.id}
                   className={`p-3.5 rounded-xl border transition-all ${
                     isKolyan
-                      ? 'bg-amber-950/30 border-amber-600/70 shadow-lg shadow-amber-950/40 relative overflow-hidden'
+                      ? 'bg-amber-950/20 border-amber-600/70'
                       : isZhenya
-                      ? 'bg-cyan-950/20 border-cyan-700/60'
+                      ? 'bg-cyan-950/20 border-cyan-700/60 shadow-lg shadow-cyan-950/40 relative overflow-hidden'
                       : 'bg-blue-950/20 border-blue-800/60'
                   }`}
                 >
-                  {isKolyan && (
-                    <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 to-orange-500 text-[10px] text-slate-950 font-bold px-2 py-0.5 rounded-bl-lg">
-                      СТРАТЕГИЧЕСКИЙ АУДИТОР
+                  {isZhenya && (
+                    <div className="absolute top-0 right-0 bg-gradient-to-l from-cyan-500 to-teal-500 text-[10px] text-slate-950 font-bold px-2 py-0.5 rounded-bl-lg">
+                      ЖЕНЯ (АРТ & АУДИТ)
                     </div>
                   )}
 
@@ -281,6 +308,11 @@ export default function App() {
             })}
           </div>
         </section>
+
+        {/* Tab: Comic Reader */}
+        {activeTab === 'comic' && (
+          <ComicReader />
+        )}
 
         {/* Tab 1: Audit Center */}
         {activeTab === 'audit' && (
@@ -885,7 +917,7 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit dac4ea4</span>
+            <span className="text-cyan-400">Commit f89021d</span>
           </div>
           <div className="text-slate-400">
             «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»
