@@ -1,27 +1,24 @@
 # Upstream Hermes — фиксация источника правды
 
-## Зачем
-
-Колян справедливо потребовал: не писать «соответствует preload.ts», пока нет SHA и сверки.
-
 ## Текущий статус
 
 | Поле | Значение |
 |------|----------|
 | Репозиторий | https://github.com/NousResearch/hermes-agent |
-| Тег / ветка | `[НЕ ЗАФИКСИРОВАНО]` |
-| Git SHA | `[НЕ ЗАФИКСИРОВАНО]` |
-| Дата сверки | — |
-| Снимок `apps/desktop/src/preload.ts` | нет |
+| Ветка | `main` |
+| Git SHA | `[API rate limit — не зафиксирован хэш]` |
+| Preload path | `apps/desktop/electron/preload.ts` |
+| Дата сверки | 2026-11-12 |
+| Снимок | см. `docs/upstream/FINDINGS_2026-11-12.md` |
 
-## Как закрыть (Шаг 3 Эпохи 2)
+## Критические факты (2026-11-12)
 
-1. Клонировать/обновить hermes-agent
-2. Записать `git rev-parse HEAD` и тег (если есть)
-3. Скопировать `apps/desktop/src/preload.ts` → `docs/upstream/preload.ts.snapshot`
-4. Пройтись diff’ом по методам vs `src/desktop-bridge/types.ts`
-5. Обновить таблицу выше и `ARCHITECTURE.md`
+1. Renderer API = **`window.hermesDesktop`**, не `window.electronAPI`
+2. Backend ready = stdout `HERMES_BACKEND_READY port=<N>` (cold start до 60s)
+3. Порт динамический, не hardcode 8642
+
+Подробности: [FINDINGS_2026-11-12.md](./upstream/FINDINGS_2026-11-12.md)
 
 ## Правило
 
-Любое утверждение «1:1 с Hermes» без заполненной таблицы — нарушение Закона №2 (честность).
+Любое утверждение «1:1 с Hermes» без актуальной сверки — нарушение Закона №2.

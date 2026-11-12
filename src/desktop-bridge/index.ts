@@ -1,7 +1,8 @@
 /**
  * Poseidon Desktop Bridge
  *
- * Изоморфный слой совместимости с window.electronAPI из Hermes Desktop.
+ * Изоморфный слой. Апстрим Hermes (main, 2026-11) использует window.hermesDesktop.
+ * Ранняя гипотеза про window.electronAPI оказалась неточной — см. docs/upstream/FINDINGS_2026-11-12.md.
  *
  * - Внутри Tauri  → настоящие invoke
  * - В браузере    → честные моки
@@ -166,10 +167,17 @@ export async function getDesktopAPI(): Promise<PoseidonDesktopAPI> {
 export async function installDesktopBridge(): Promise<PoseidonDesktopAPI> {
   const api = await getDesktopAPI();
 
-  (window as any).electronAPI = api;
+  // Primary name in current Hermes upstream (apps/desktop/electron/preload.ts):
+  // contextBridge.exposeInMainWorld('hermesDesktop', { ... })
+  (window as any).hermesDesktop = api;
+
+  // Poseidon namespace
   (window as any).poseidon = api;
 
-  console.log('[Poseidon Bridge] installed → window.electronAPI + window.poseidon');
+  // Legacy alias from early Poseidon hypothesis (NOT what upstream uses today)
+  (window as any).electronAPI = api;
+
+  console.log('[Poseidon Bridge] installed → window.hermesDesktop (+ poseidon, electronAPI alias)');
   return api;
 }
 

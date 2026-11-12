@@ -42,9 +42,11 @@
 
 ### Шаг 3 — Факты об апстриме
 - [x] Процесс и шаблон зафиксированы (`docs/UPSTREAM.md`)
-- [ ] Зафиксировать **SHA / тег** Hermes, от которого отталкиваемся
-- [ ] Сделать снимок `preload.ts` и сверить с `desktop-bridge/types.ts`
+- [x] Частичная сверка preload main (2026-11-12): API=`hermesDesktop`, READY via stdout
+- [ ] Зафиксировать точный **SHA** (rate limit GitHub API)
+- [ ] Полный diff методов preload vs desktop-bridge
 - [ ] Обновить `ARCHITECTURE.md` с конкретной версией
+- [ ] GatewayManager: парсинг `HERMES_BACKEND_READY port=<N>`
 
 ### Шаг 4 — Безопасность (высокие риски H4–H6)
 - [x] ADR «Security model» (ADR-013)

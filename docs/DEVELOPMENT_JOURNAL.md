@@ -268,3 +268,15 @@ Spawn больше не заглушка. Если `hermes` есть в сист
 - `docs/upstream/` — место для снимков апстрима
 
 **Заметка:** Женя между аудитами нарисовал графическую новеллу «Рождение Посейдона» (8 кадров, Cyberpunk × Van Gogh × Gaudí) + читалку в дашборде. Стиль выдержан, дух проекта пойман. Красиво.
+
+### 2026-11-12 — Сверка с реальным preload Hermes
+
+**Что сделано (Grok):**
+- Прочитан `apps/desktop/electron/preload.ts` из апстрима main
+- **Критично:** API = `window.hermesDesktop`, не `window.electronAPI`
+- Backend ready = stdout `HERMES_BACKEND_READY port=<N>`, cold start до 60s
+- Зафиксировано в `docs/upstream/FINDINGS_2026-11-12.md` и `docs/UPSTREAM.md`
+- Bridge теперь ставит `window.hermesDesktop` как основной API
+- GatewayManager помечен TODO на парсинг READY-строки
+
+**Статус:** Закон №2 соблюдён — ранняя гипотеза исправлена публично.

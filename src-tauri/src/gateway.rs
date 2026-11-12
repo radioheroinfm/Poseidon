@@ -11,7 +11,9 @@ use std::sync::Mutex;
 use std::time::Duration;
 use log::{info, warn, error};
 
-/// Порт по умолчанию, на котором Hermes Gateway обычно слушает.
+/// Fallback-порт. В апстриме Hermes реальный порт анонсируется в stdout:
+/// `HERMES_BACKEND_READY port=<N>` (cold start может быть 30–60s).
+/// TODO(epoch-2): парсить stdout child вместо hardcode.
 const DEFAULT_GATEWAY_PORT: u16 = 8642;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
