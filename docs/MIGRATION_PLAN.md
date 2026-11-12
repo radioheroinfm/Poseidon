@@ -24,9 +24,9 @@
 ### Шаг 0 — Первая сборка (блокеры B1–B3)
 **Приоритет: немедленный**
 
-- [ ] **B1** Добавить `src-tauri/src/main.rs` (точка входа, вызов `run()`)
-- [ ] **B2** Восстановить корректные пути иконок (`128x128@2x.png` и т.д.), сгенерировать набор через `tauri icon`
-- [ ] **B3** Корневой `package.json` + `@tauri-apps/api` / CLI, `tsconfig.json`, `Cargo.lock`, файл `LICENSE` (MIT)
+- [x] **B1** `src-tauri/src/main.rs` на месте
+- [x] **B2** Иконки: минимальный валидный набор + корректные пути
+- [x] **B3** `LICENSE` + `package.json` + `tsconfig.json` (Cargo.lock появится после первой сборки)
 - [ ] Добиться `cargo tauri dev` → открывается окно
 
 ### Шаг 1 — CI как судья
@@ -35,8 +35,8 @@
 - [ ] Зафиксировать правило: «закрыто» = зелёный CI, а не ощущение
 
 ### Шаг 2 — Контракт и тесты (блокеры B4, B5)
-- [ ] **B4** Привести значения платформы к контракту Electron: `macos→darwin`, `windows→win32`
-- [ ] **B5** Унифицировать сериализацию (snake_case ↔ camelCase) — либо `#[serde(rename_all = "camelCase")]` в Rust, либо явный маппинг
+- [x] **B4** platform: `macos→darwin`, `windows→win32`
+- [x] **B5** `#[serde(rename_all = "camelCase")]` на SystemInfo и GatewayStatus
 - [ ] Контрактные тесты на `SystemInfo`, `GatewayStatus`, platform values
 - [ ] Юнит-тесты на `GatewayManager` (owned / attach / stop)
 
