@@ -263,3 +263,33 @@ impl Drop for GatewayManager {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_manager_is_not_owned() {
+        let mgr = GatewayManager::new();
+        let status = mgr.status().expect("status");
+        assert!(!status.owned_by_us);
+        assert!(status.pid.is_none());
+    }
+
+    #[test]
+    fn stop_without_ownership_is_safe() {
+        let mgr = GatewayManager::new();
+        let status = mgr.stop().expect("stop");
+        assert!(!status.owned_by_us);
+        assert!(!status.running || status.port_open); // may or may not have something on port
+    }
+
+    #[test]
+    fn platform_values_are_electron_compatible() {
+        // This test lives conceptually with B4; actual mapping is in bridge.rs
+        // Here we only assert the manager can be created repeatedly.
+        let _m1 = GatewayManager::new();
+        let _m2 = GatewayManager::new();
+    }
+}

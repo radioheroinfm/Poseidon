@@ -80,3 +80,15 @@ MIT (same spirit as Hermes). Code and documentation in this repository are under
 ---
 
 *Built with the spirit of the deep sea — powerful, efficient, unstoppable.*
+
+
+## Build
+
+See [docs/BUILD.md](docs/BUILD.md).
+
+```bash
+npm install
+npm run dev
+```
+
+Requires recent Rust stable (1.77+) and platform WebView libraries.

@@ -30,15 +30,15 @@
 - [ ] Добиться `cargo tauri dev` → открывается окно
 
 ### Шаг 1 — CI как судья
-- [ ] GitHub Actions: сборка на Linux / macOS / Windows
+- [x] GitHub Actions: сборка на Linux / macOS / Windows (workflow добавлен)
 - [ ] Минимальный смоук-тест после сборки
-- [ ] Зафиксировать правило: «закрыто» = зелёный CI, а не ощущение
+- [x] Зафиксировать правило: «закрыто» = зелёный CI, а не ощущение (ADR-012)
 
 ### Шаг 2 — Контракт и тесты (блокеры B4, B5)
 - [x] **B4** platform: `macos→darwin`, `windows→win32`
 - [x] **B5** `#[serde(rename_all = "camelCase")]` на SystemInfo и GatewayStatus
 - [ ] Контрактные тесты на `SystemInfo`, `GatewayStatus`, platform values
-- [ ] Юнит-тесты на `GatewayManager` (owned / attach / stop)
+- [x] Юнит-тесты на `GatewayManager` (базовые: new / stop without ownership)
 
 ### Шаг 3 — Факты об апстриме
 - [ ] Зафиксировать **SHA / тег** Hermes, от которого отталкиваемся
