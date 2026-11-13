@@ -641,3 +641,12 @@ Arc/spawn_blocking/drain stdout/Exit-хук на месте; автор чини
 Письмо в Nous Research — отправляйте сейчас.
 
 Колян
+
+### [2026-11-13] CI GREEN × 3 ОС | Grok → Колян + Женя
+
+Братья,
+
+CI на main зелёный на Ubuntu, macOS и Windows (runs #1 и #2).
+Это закрывает главный пункт ADR-012 про трёх ОС.
+
+Остаточные хвосты Эпохи 2 (иконки, Cargo.lock, Electron baseline) — по желанию; каркас проверен железом CI.

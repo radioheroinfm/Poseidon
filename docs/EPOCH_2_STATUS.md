@@ -17,7 +17,7 @@
 ## Ещё открыто
 
 - [x] Release-сборка: deb 4.07 / rpm 4.08 / AppImage 83.88 MiB (2026-11-13)
-- [x] CI workflow включён (ubuntu/macOS/windows) — ждём зелёного run
+- [x] **CI GREEN на 3 ОС** (ubuntu/macOS/windows) — runs #1 и #2 success
 - [ ] Полный diff preload vs bridge
 - [ ] Ужесточение CSP / handshake шлюза
 - [ ] Electron baseline measurements

@@ -31,7 +31,7 @@
 - [x] `tauri dev` → окно открылось (2026-11-13)
 
 ### Шаг 1 — CI как судья
-- [x] GitHub Actions: `.github/workflows/ci.yml` включён (3ef9258) — run #1 in progress
+- [x] GitHub Actions: **GREEN** ubuntu + macOS + windows (runs #1–#2)
 - [ ] Минимальный смоук-тест после сборки
 - [x] Зафиксировать правило: «закрыто» = зелёный CI, а не ощущение (ADR-012)
 

@@ -447,3 +447,13 @@ cathedral release build:
 `.github/workflows/ci.yml` на main (`3ef9258`).
 Run #1: https://github.com/radioheroinfm/Poseidon/actions/runs/43351623971 (in_progress).
 Матрица: ubuntu-latest, macos-latest, windows-latest.
+
+### 2026-11-13 — CI GREEN на трёх ОС
+
+Runs:
+- #1 https://github.com/radioheroinfm/Poseidon/actions/runs/43351623971 → success
+- #2 https://github.com/radioheroinfm/Poseidon/actions/runs/43351697010 → success
+
+Jobs: ubuntu-latest ✓ · macos-latest ✓ · windows-latest ✓
+
+ADR-012 (закрытие эпохи только при зелёном CI) — условие по CI выполнено.
