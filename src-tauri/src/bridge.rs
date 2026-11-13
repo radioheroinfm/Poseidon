@@ -188,12 +188,17 @@ fn validate_open_path(path: &str) -> Result<(), String> {
         return Err("open_path: empty path".into());
     }
     let lower = trimmed.to_lowercase();
-    // Защита от scheme-based атак (file:// уже ок для open, но javascript: и т.п. — нет)
-    if lower.contains("://") && !lower.starts_with("file://") {
-        return Err(format!(
-            "open_path: blocked path with non-file scheme: {}",
-            path
-        ));
+    // Block URL-like schemes. Note: "javascript:foo" has no "://".
+    if let Some(idx) = lower.find(':') {
+        let scheme = &lower[..idx];
+        // Allow plain Windows paths like "C:\foo" (single letter scheme)
+        let is_windows_drive = scheme.len() == 1 && scheme.as_bytes()[0].is_ascii_alphabetic();
+        if !is_windows_drive && scheme != "file" {
+            return Err(format!(
+                "open_path: blocked path with scheme '{}': {}",
+                scheme, path
+            ));
+        }
     }
     Ok(())
 }
@@ -271,6 +276,9 @@ mod tests {
     fn open_path_rejects_empty_and_schemes() {
         assert!(validate_open_path("").is_err());
         assert!(validate_open_path("javascript:foo").is_err());
+        assert!(validate_open_path("data:text/html,hi").is_err());
+        assert!(validate_open_path("http://example.com").is_err());
         assert!(validate_open_path("/tmp/test.txt").is_ok());
+        assert!(validate_open_path("C:\\Users\\test").is_ok()); // Windows drive
     }
 }

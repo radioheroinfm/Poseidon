@@ -330,3 +330,16 @@ Spawn больше не заглушка. Если `hermes` есть в сист
 - `tsc --noEmit` на `src/desktop-bridge/` проходит с 0 ошибок, однако сам bridge пока не подключается в `frontendDist` (`renderer-placeholder/index.html`).
 - Выявлены 3 критических бага в Rust: падающий тест `open_path_rejects_empty_and_schemes` (`javascript:foo`), закрытие `stdout` pipe + блокировка `Mutex`/`lines()` в `GatewayManager::start()`, и несброшенный `owned_by_us` в `GatewayManager::status()`.
 - Подготовлен отчёт `docs/AUDIT_REPORT_EPOCH_2.md` с готовыми патчами и чеклистом до закрытия Эпохи 2.
+
+### 2026-11-13 — Аудит Жени №4: три критических фикса
+
+**Источник:** `docs/AUDIT_REPORT_EPOCH_2.md` (срез 7fbc8f3)
+
+**Исправлено:**
+1. `validate_open_path` — режет `javascript:`, `data:`, `http:` и т.п. (не только `://`)
+2. `GatewayManager::start` — фоновый drainer stdout до EOF, `PYTHONUNBUFFERED=1`, `recv_timeout`, mutex не держится на время ожидания READY
+3. `GatewayManager::status` — при смерти child сбрасывает `owned_by_us = false`
+4. renderer-placeholder смотрит на `window.hermesDesktop`
+5. CI template: `cargo test` + `tsc --noEmit`
+
+**Статус:** критические баги Жени закрыты в коде. Нужна повторная сборка + `cargo test` на машине Толяна.

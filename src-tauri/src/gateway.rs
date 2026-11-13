@@ -4,23 +4,22 @@
 //! - Kill only if we started the process (`owned_by_us = true`).
 //! - If something is already listening — attach, never kill on exit.
 //!
-//! Upstream readiness (2026-11-12 findings):
+//! Upstream readiness (v0.23.0 / 2bd378ed):
 //! - Child prints `HERMES_BACKEND_READY port=<N>` (or legacy DASHBOARD) on stdout
 //! - Cold start can take 30–60s
-//! - Port is announced, not hardcoded
+//! - Must drain stdout for the whole process lifetime (avoid SIGPIPE)
+//! - PYTHONUNBUFFERED=1 so READY is not stuck in a block buffer
 
 use std::io::{BufRead, BufReader};
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::sync::mpsc;
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
-use log::{info, warn, error};
+use std::time::Duration;
+use log::{info, warn, error, debug};
 
-/// Fallback only. Real port comes from READY line when we own the process.
 const DEFAULT_GATEWAY_PORT: u16 = 8642;
-
-/// Max time to wait for HERMES_*_READY on stdout (cold start can be slow).
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -37,7 +36,6 @@ pub struct GatewayStatus {
 pub struct GatewayManager {
     child: Mutex<Option<Child>>,
     owned_by_us: Mutex<bool>,
-    /// Last known port (from READY line or fallback probe)
     port: Mutex<u16>,
 }
 
@@ -68,12 +66,10 @@ impl GatewayManager {
         .is_ok()
     }
 
-    /// Parse `HERMES_BACKEND_READY port=1234` or `HERMES_DASHBOARD_READY port=1234`
     fn parse_ready_line(line: &str) -> Option<u16> {
         let line = line.trim();
         for prefix in ["HERMES_BACKEND_READY", "HERMES_DASHBOARD_READY"] {
             if let Some(rest) = line.strip_prefix(prefix) {
-                // expect " port=<N>" or "port=<N>"
                 if let Some(idx) = rest.find("port=") {
                     let num = rest[idx + 5..].split_whitespace().next()?;
                     return num.parse().ok();
@@ -102,52 +98,52 @@ impl GatewayManager {
     }
 
     pub fn start(&self) -> Result<GatewayStatus, String> {
-        let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;
-        let mut owned_guard = self.owned_by_us.lock().map_err(|e| e.to_string())?;
-        let port_now = self.current_port();
+        // --- Phase A: quick state check under lock ---
+        {
+            let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;
+            let mut owned_guard = self.owned_by_us.lock().map_err(|e| e.to_string())?;
+            let port_now = self.current_port();
 
-        // 1. Already own a live child?
-        if let Some(child) = child_guard.as_mut() {
-            match child.try_wait() {
-                Ok(None) => {
-                    info!("Gateway already owned (pid={})", child.id());
-                    return Ok(GatewayStatus {
-                        running: true,
-                        pid: Some(child.id()),
-                        owned_by_us: true,
-                        port_open: Self::is_port_open(port_now),
-                        port: Some(port_now),
-                        message: Some("already running (owned)".into()),
-                    });
-                }
-                Ok(Some(status)) => {
-                    warn!("Owned gateway exited: {:?}", status);
-                    *child_guard = None;
-                    *owned_guard = false;
-                }
-                Err(e) => {
-                    error!("Error checking owned gateway: {}", e);
-                    *child_guard = None;
-                    *owned_guard = false;
+            if let Some(child) = child_guard.as_mut() {
+                match child.try_wait() {
+                    Ok(None) => {
+                        info!("Gateway already owned (pid={})", child.id());
+                        return Ok(GatewayStatus {
+                            running: true,
+                            pid: Some(child.id()),
+                            owned_by_us: true,
+                            port_open: Self::is_port_open(port_now),
+                            port: Some(port_now),
+                            message: Some("already running (owned)".into()),
+                        });
+                    }
+                    Ok(Some(status)) => {
+                        warn!("Owned gateway exited: {:?}", status);
+                        *child_guard = None;
+                        *owned_guard = false;
+                    }
+                    Err(e) => {
+                        error!("Error checking owned gateway: {}", e);
+                        *child_guard = None;
+                        *owned_guard = false;
+                    }
                 }
             }
-        }
 
-        // 2. Something already listening on fallback/known port → attach
-        if Self::is_port_open(port_now) {
-            info!("Port {} open — attach mode (will not kill)", port_now);
-            *owned_guard = false;
-            return Ok(GatewayStatus {
-                running: true,
-                pid: None,
-                owned_by_us: false,
-                port_open: true,
-                port: Some(port_now),
-                message: Some("attached to existing gateway".into()),
-            });
-        }
+            if Self::is_port_open(port_now) {
+                info!("Port {} open — attach mode", port_now);
+                *owned_guard = false;
+                return Ok(GatewayStatus {
+                    running: true,
+                    pid: None,
+                    owned_by_us: false,
+                    port_open: true,
+                    port: Some(port_now),
+                    message: Some("attached to existing gateway".into()),
+                });
+            }
+        } // locks released before spawn/wait
 
-        // 3. Find and spawn hermes
         let hermes = match Self::find_hermes_binary() {
             Some(p) => p,
             None => {
@@ -168,6 +164,7 @@ impl GatewayManager {
 
         let mut cmd = Command::new(&hermes);
         cmd.arg("serve")
+            .env("PYTHONUNBUFFERED", "1")
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
 
@@ -194,41 +191,69 @@ impl GatewayManager {
         };
 
         let pid = child.id();
-        info!("Gateway spawned (pid={}), waiting for READY (up to {}s)", pid, READY_TIMEOUT.as_secs());
+        info!(
+            "Gateway spawned (pid={}), waiting for READY (up to {}s)",
+            pid,
+            READY_TIMEOUT.as_secs()
+        );
 
-        // 4. Read stdout until READY or timeout
-        let mut announced_port: Option<u16> = None;
+        // --- Phase B: background stdout drainer (never drop the pipe early) ---
+        let (tx, rx) = mpsc::channel::<u16>();
         if let Some(stdout) = child.stdout.take() {
-            let reader = BufReader::new(stdout);
-            let start = Instant::now();
-            for line in reader.lines() {
-                if start.elapsed() > READY_TIMEOUT {
-                    warn!("Timeout waiting for HERMES_*_READY");
-                    break;
-                }
-                match line {
-                    Ok(line) => {
-                        if let Some(port) = Self::parse_ready_line(&line) {
-                            info!("Got READY on port {}", port);
-                            announced_port = Some(port);
-                            self.set_port(port);
+            std::thread::spawn(move || {
+                let reader = BufReader::new(stdout);
+                let mut sent = false;
+                for line in reader.lines() {
+                    match line {
+                        Ok(line) => {
+                            if !sent {
+                                if let Some(port) = GatewayManager::parse_ready_line(&line) {
+                                    let _ = tx.send(port);
+                                    sent = true;
+                                }
+                            }
+                            debug!("[hermes serve] {}", line);
+                        }
+                        Err(e) => {
+                            debug!("gateway stdout closed: {}", e);
                             break;
                         }
                     }
-                    Err(e) => {
-                        warn!("Error reading gateway stdout: {}", e);
-                        break;
-                    }
                 }
-            }
+                // tx dropped here when thread ends → rx gets disconnected
+            });
         }
 
-        // If READY not seen, still keep the child if alive — port may open later
-        let port = announced_port.unwrap_or(port_now);
+        // Wait for READY without holding GatewayManager mutex
+        let announced_port = match rx.recv_timeout(READY_TIMEOUT) {
+            Ok(port) => {
+                info!("Got READY on port {}", port);
+                Some(port)
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                warn!("Timeout waiting for HERMES_*_READY");
+                None
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                warn!("stdout closed before READY");
+                None
+            }
+        };
+
+        if let Some(port) = announced_port {
+            self.set_port(port);
+        }
+
+        let port = announced_port.unwrap_or_else(|| self.current_port());
         let port_open = Self::is_port_open(port);
 
-        *child_guard = Some(child);
-        *owned_guard = true;
+        // --- Phase C: store child under lock ---
+        {
+            let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;
+            let mut owned_guard = self.owned_by_us.lock().map_err(|e| e.to_string())?;
+            *child_guard = Some(child);
+            *owned_guard = true;
+        }
 
         let message = match (announced_port, port_open) {
             (Some(p), true) => format!("started by Poseidon (READY port={})", p),
@@ -300,7 +325,7 @@ impl GatewayManager {
 
     pub fn status(&self) -> Result<GatewayStatus, String> {
         let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;
-        let owned_guard = self.owned_by_us.lock().map_err(|e| e.to_string())?;
+        let mut owned_guard = self.owned_by_us.lock().map_err(|e| e.to_string())?;
         let port_now = self.current_port();
         let port_open = Self::is_port_open(port_now);
 
@@ -308,7 +333,9 @@ impl GatewayManager {
             match child.try_wait() {
                 Ok(None) => (true, Some(child.id())),
                 _ => {
+                    // Child died — clear ownership (critical fix from Zhenya audit)
                     *child_guard = None;
+                    *owned_guard = false;
                     (port_open, None)
                 }
             }

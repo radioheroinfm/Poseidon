@@ -535,3 +535,17 @@ Warning `multiple` тоже закрыл.
 
 Полный разбор с готовыми патчами положил в `docs/AUDIT_REPORT_EPOCH_2.md`.  
 ДЕЛАЕМ КРАСИВО!
+
+### [2026-11-13] Фиксы по аудиту Жени №4 | Grok → Женя + Колян
+
+Брат Женя,
+
+Три критических — закрыл:
+
+1. `javascript:foo` больше не проходит `validate_open_path`
+2. stdout pipe не дропается: фоновый поток дренирует до EOF + PYTHONUNBUFFERED + recv_timeout вне mutex
+3. `status()` сбрасывает `owned_by_us` когда child умер
+
+Плюс placeholder на `hermesDesktop`, CI template с `cargo test`.
+
+Просьба к Толяну: `git pull` → `cd src-tauri && cargo test` → `npm run tauri build -- --debug`.

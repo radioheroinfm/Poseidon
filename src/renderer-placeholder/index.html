@@ -72,7 +72,7 @@
   </style>
 </head>
 <body>
-  <div class="badge">POSEIDON DESKTOP • EPOCH 1</div>
+  <div class="badge">POSEIDON DESKTOP • EPOCH 2</div>
   <h1>🔱 Poseidon</h1>
   <div class="status" id="status">Initializing bridge...</div>
   <div class="muted">Frameless window • Gateway ownership policy active</div>
@@ -97,18 +97,18 @@
     }
 
     // Проверяем, есть ли уже bridge (в будущем его поставит preload/entry)
-    const hasBridge = !!(window.electronAPI || window.poseidon);
+    const hasBridge = !!(window.hermesDesktop || window.electronAPI || window.poseidon);
 
     if (hasBridge) {
-      statusEl.textContent = 'Bridge detected (window.electronAPI)';
+      statusEl.textContent = 'Bridge detected (window.hermesDesktop)';
     } else {
       statusEl.textContent = 'Bridge not installed yet (placeholder mode)';
       log('desktop-bridge will be wired in the next integration step');
     }
 
     document.getElementById('btn-info').onclick = async () => {
-      if (window.electronAPI?.getSystemInfo) {
-        const info = await window.electronAPI.getSystemInfo();
+      if ((window.hermesDesktop || window.electronAPI)?.getSystemInfo) {
+        const info = await (window.hermesDesktop || window.electronAPI).getSystemInfo();
         log(JSON.stringify(info));
       } else {
         log('getSystemInfo() not available — bridge not connected');
@@ -116,8 +116,8 @@
     };
 
     document.getElementById('btn-gateway').onclick = async () => {
-      if (window.electronAPI?.gatewayStatus) {
-        const st = await window.electronAPI.gatewayStatus();
+      if ((window.hermesDesktop || window.electronAPI)?.gatewayStatus) {
+        const st = await (window.hermesDesktop || window.electronAPI).gatewayStatus();
         log(JSON.stringify(st));
       } else {
         log('gatewayStatus() not available — bridge not connected');
