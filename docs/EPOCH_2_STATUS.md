@@ -22,6 +22,7 @@
 - [ ] Ужесточение CSP / handshake шлюза
 - [ ] Electron baseline measurements
 - [x] `tauri dev` smoke — окно открылось (подтверждено Толяном, 2026-11-13)
+- [x] placeholder: live `__TAURI__` invoke (System Info / Gateway Status / window)
 
 ## Артефакты первой сборки
 

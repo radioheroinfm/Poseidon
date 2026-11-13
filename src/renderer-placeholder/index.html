@@ -19,6 +19,7 @@
       text-align: center;
       gap: 14px;
       user-select: none;
+      -webkit-app-region: drag;
     }
     h1 {
       font-size: 2.5rem;
@@ -37,7 +38,7 @@
     .status {
       font-size: 0.95rem;
       opacity: 0.9;
-      max-width: 480px;
+      max-width: 520px;
       line-height: 1.55;
     }
     .muted {
@@ -49,6 +50,9 @@
       display: flex;
       gap: 10px;
       margin-top: 18px;
+      flex-wrap: wrap;
+      justify-content: center;
+      -webkit-app-region: no-drag;
     }
     button {
       background: rgba(103, 232, 249, 0.1);
@@ -65,64 +69,87 @@
     }
     #log {
       margin-top: 20px;
-      font-size: 0.8rem;
-      opacity: 0.7;
+      font-size: 0.78rem;
+      opacity: 0.85;
       min-height: 1.2em;
+      max-width: 640px;
+      word-break: break-all;
+      -webkit-app-region: no-drag;
     }
   </style>
 </head>
 <body>
   <div class="badge">POSEIDON DESKTOP • EPOCH 2</div>
   <h1>🔱 Poseidon</h1>
-  <div class="status" id="status">Initializing bridge...</div>
-  <div class="muted">Frameless window • Gateway ownership policy active</div>
+  <div class="status" id="status">Connecting to Tauri…</div>
+  <div class="muted">Frameless · Gateway ownership · live invoke</div>
 
   <div class="row">
     <button id="btn-info">System Info</button>
     <button id="btn-gateway">Gateway Status</button>
+    <button id="btn-min">Minimize</button>
+    <button id="btn-close">Close</button>
   </div>
   <div id="log"></div>
 
-  <script type="module">
-    // Когда проект будет собираться нормально, здесь будет:
-    // import { installDesktopBridge } from '../../desktop-bridge/index.ts';
-    // Сейчас — честная демонстрационная заглушка с проверкой наличия API.
-
+  <script>
     const statusEl = document.getElementById('status');
     const logEl = document.getElementById('log');
 
     function log(msg) {
-      logEl.textContent = msg;
+      logEl.textContent = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2);
       console.log('[Poseidon]', msg);
     }
 
-    // Проверяем, есть ли уже bridge (в будущем его поставит preload/entry)
-    const hasBridge = !!(window.hermesDesktop || window.electronAPI || window.poseidon);
-
-    if (hasBridge) {
-      statusEl.textContent = 'Bridge detected (window.hermesDesktop)';
-    } else {
-      statusEl.textContent = 'Bridge not installed yet (placeholder mode)';
-      log('desktop-bridge will be wired in the next integration step');
+    function getInvoke() {
+      // Tauri 2 global API when withGlobalTauri: true
+      const g = window.__TAURI__;
+      if (g?.core?.invoke) return g.core.invoke.bind(g.core);
+      if (g?.tauri?.invoke) return g.tauri.invoke.bind(g.tauri);
+      if (window.__TAURI_INTERNALS__?.invoke) {
+        return window.__TAURI_INTERNALS__.invoke.bind(window.__TAURI_INTERNALS__);
+      }
+      return null;
     }
 
-    document.getElementById('btn-info').onclick = async () => {
-      if ((window.hermesDesktop || window.electronAPI)?.getSystemInfo) {
-        const info = await (window.hermesDesktop || window.electronAPI).getSystemInfo();
-        log(JSON.stringify(info));
-      } else {
-        log('getSystemInfo() not available — bridge not connected');
-      }
-    };
+    const invoke = getInvoke();
 
-    document.getElementById('btn-gateway').onclick = async () => {
-      if ((window.hermesDesktop || window.electronAPI)?.gatewayStatus) {
-        const st = await (window.hermesDesktop || window.electronAPI).gatewayStatus();
-        log(JSON.stringify(st));
-      } else {
-        log('gatewayStatus() not available — bridge not connected');
+    if (invoke) {
+      statusEl.textContent = 'Tauri IPC live (window.__TAURI__)';
+      log('invoke ready — try the buttons');
+    } else {
+      statusEl.textContent = 'Tauri global API not found (open via tauri dev/build)';
+      log('No __TAURI__ — browser-only preview');
+    }
+
+    async function call(cmd, args) {
+      if (!invoke) {
+        log(cmd + ': no invoke');
+        return;
       }
-    };
+      try {
+        const result = await invoke(cmd, args || {});
+        log(result);
+        return result;
+      } catch (e) {
+        log(cmd + ' error: ' + (e?.message || String(e)));
+      }
+    }
+
+    document.getElementById('btn-info').onclick = () => call('get_system_info');
+    document.getElementById('btn-gateway').onclick = () => call('gateway_status');
+    document.getElementById('btn-min').onclick = () => call('window_minimize');
+    document.getElementById('btn-close').onclick = () => call('window_close');
+
+    // Auto probe on load
+    if (invoke) {
+      call('get_system_info').then((info) => {
+        if (info?.platform) {
+          statusEl.textContent =
+            'Live · ' + info.platform + '/' + info.arch + ' · Poseidon ' + info.version;
+        }
+      });
+    }
   </script>
 </body>
 </html>

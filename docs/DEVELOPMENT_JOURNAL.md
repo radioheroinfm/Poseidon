@@ -423,3 +423,12 @@ cathedral release build:
 - AppImage **83.88 MiB**
 
 Записано в `docs/METRICS.md`. Electron baseline ещё нет.
+
+### 2026-11-13 — Live invoke в placeholder
+
+`src/renderer-placeholder/index.html` больше не заглушка:
+- использует `window.__TAURI__.core.invoke` (withGlobalTauri: true)
+- кнопки: get_system_info, gateway_status, window_minimize, window_close
+- авто-probe System Info при загрузке
+
+Проверка: `npm run tauri dev` → нажать System Info → JSON из Rust.
