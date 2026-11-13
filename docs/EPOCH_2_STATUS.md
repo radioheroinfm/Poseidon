@@ -21,7 +21,7 @@
 - [ ] Полный diff preload vs bridge
 - [ ] Ужесточение CSP / handshake шлюза
 - [ ] Electron baseline measurements
-- [ ] `tauri dev` smoke (окно реально открывается и bridge жив)
+- [x] `tauri dev` smoke — окно открылось (подтверждено Толяном, 2026-11-13)
 
 ## Артефакты первой сборки
 
