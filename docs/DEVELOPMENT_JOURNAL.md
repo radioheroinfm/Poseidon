@@ -388,3 +388,19 @@ npm run tauri build -- --debug  →  OK
 cathedral:
 - cargo test → 8/8 ok
 - tauri build --debug → OK (deb/rpm/AppImage ~54 / ~54 / ~127 MiB)
+
+### 2026-11-13 — Стратегический аудит Эпохи 2 (Колян)
+
+**Отметка:** `[ЭПОХА 2: RUST-КАРКАС ПРИНЯТ УСЛОВНО; ЗАКРЫТИЕ ПО ADR-012 НЕ НАСТУПИЛО]`
+**Отчёт:** `docs/AUDIT_REPORT_EPOCH_2_STRATEGIC.md`
+**Следующий шаг:** R1, R2, R5 → зелёный CI → Эпоха 3 (PRELOAD_MAP, Spike 1).
+
+### 2026-11-13 — Фиксы по стратегическому аудиту Коляна (R1, R5, R7)
+
+**R1:** ownership (`child` + `owned_by_us`) записывается **сразу после spawn**, до ожидания READY. Exit/stop во время cold start теперь может убить процесс. Если process умер до READY — ownership сбрасывается, `running: false`.
+
+**R5:** fallback stop — SIGKILL всей process group (Unix). `status().port = None`, когда ничего не запущено.
+
+**R7:** `rust-version` снова 1.85; `libc` только под `cfg(unix)`.
+
+**Честность плана:** галочка CI снята (workflow всё ещё в docs/ci/).

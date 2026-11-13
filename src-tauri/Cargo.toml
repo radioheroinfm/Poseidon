@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Poseidon — Hermes Agent Desktop on Tauri"
 authors = ["Poseidon Team"]
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.85"
 
 [lib]
 name = "poseidon_desktop_lib"
@@ -24,8 +24,10 @@ env_logger = "0.11"
 open = "5"
 which = "7"
 dirs = "6"
-libc = "0.2"
 
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

@@ -31,7 +31,7 @@
 - [x] `tauri dev` → окно открылось (2026-11-13)
 
 ### Шаг 1 — CI как судья
-- [x] GitHub Actions: сборка на Linux / macOS / Windows (workflow добавлен)
+- [ ] GitHub Actions: workflow template в docs/ci/ — **не включён** в `.github/workflows/` (нужен PAT workflow или ручной copy)
 - [ ] Минимальный смоук-тест после сборки
 - [x] Зафиксировать правило: «закрыто» = зелёный CI, а не ощущение (ADR-012)
 
@@ -43,11 +43,11 @@
 
 ### Шаг 3 — Факты об апстриме
 - [x] Процесс и шаблон зафиксированы (`docs/UPSTREAM.md`)
-- [x] Частичная сверка preload main (2026-11-12): API=`hermesDesktop`, READY via stdout
-- [ ] Зафиксировать точный **SHA** (rate limit GitHub API)
-- [ ] Полный diff методов preload vs desktop-bridge
-- [ ] Обновить `ARCHITECTURE.md` с конкретной версией
-- [ ] GatewayManager: парсинг `HERMES_BACKEND_READY port=<N>`
+- [x] Частичная сверка preload: API=`hermesDesktop`, READY via stdout
+- [x] SHA `2bd378ed` / v0.23.0
+- [x] GatewayManager: парсинг `HERMES_BACKEND_READY port=<N>`
+- [ ] Полный diff / PRELOAD_MAP.md (Эпоха 3)
+- [ ] Обновить ARCHITECTURE с минимальным набором ключей для Spike 1
 
 ### Шаг 4 — Безопасность (высокие риски H4–H6)
 - [x] ADR «Security model» (ADR-013)

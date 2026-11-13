@@ -198,12 +198,12 @@ impl GatewayManager {
 
         let pid = child.id();
         info!(
-            "Gateway spawned (pid={}), waiting for READY (up to {}s)",
+            "Gateway spawned (pid={}), ownership recorded immediately; waiting for READY (up to {}s)",
             pid,
             READY_TIMEOUT.as_secs()
         );
 
-        // --- Phase B: background stdout drainer (never drop the pipe early) ---
+        // --- Phase B: take stdout, THEN record ownership BEFORE any wait (R1) ---
         let (tx, rx) = mpsc::channel::<u16>();
         if let Some(stdout) = child.stdout.take() {
             std::thread::spawn(move || {
@@ -226,11 +226,18 @@ impl GatewayManager {
                         }
                     }
                 }
-                // tx dropped here when thread ends → rx gets disconnected
             });
         }
 
-        // Wait for READY without holding GatewayManager mutex
+        // Record ownership IMMEDIATELY so Exit/stop during cold start can kill us (R1)
+        {
+            let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;
+            let mut owned_guard = self.owned_by_us.lock().map_err(|e| e.to_string())?;
+            *child_guard = Some(child);
+            *owned_guard = true;
+        }
+
+        // Wait for READY without holding child/owned mutexes
         let announced_port = match rx.recv_timeout(READY_TIMEOUT) {
             Ok(port) => {
                 info!("Got READY on port {}", port);
@@ -250,16 +257,44 @@ impl GatewayManager {
             self.set_port(port);
         }
 
+        // If process died before READY — clear ownership and report honestly
+        let alive = {
+            let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;
+            match child_guard.as_mut().map(|c| c.try_wait()) {
+                Some(Ok(None)) => true,
+                Some(Ok(Some(status))) => {
+                    warn!("Gateway exited before READY: {:?}", status);
+                    *child_guard = None;
+                    if let Ok(mut o) = self.owned_by_us.lock() {
+                        *o = false;
+                    }
+                    false
+                }
+                Some(Err(e)) => {
+                    error!("Error probing gateway after READY wait: {}", e);
+                    *child_guard = None;
+                    if let Ok(mut o) = self.owned_by_us.lock() {
+                        *o = false;
+                    }
+                    false
+                }
+                None => false,
+            }
+        };
+
+        if !alive {
+            return Ok(GatewayStatus {
+                running: false,
+                pid: None,
+                owned_by_us: false,
+                port_open: false,
+                port: None,
+                message: Some("hermes exited before READY".into()),
+            });
+        }
+
         let port = announced_port.unwrap_or_else(|| self.current_port());
         let port_open = Self::is_port_open(port);
-
-        // --- Phase C: store child under lock ---
-        {
-            let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;
-            let mut owned_guard = self.owned_by_us.lock().map_err(|e| e.to_string())?;
-            *child_guard = Some(child);
-            *owned_guard = true;
-        }
 
         let message = match (announced_port, port_open) {
             (Some(p), true) => format!("started by Poseidon (READY port={})", p),
@@ -273,7 +308,11 @@ impl GatewayManager {
             pid: Some(pid),
             owned_by_us: true,
             port_open,
-            port: Some(port),
+            port: if port_open || announced_port.is_some() {
+                Some(port)
+            } else {
+                None
+            },
             message: Some(message),
         })
     }
@@ -310,8 +349,17 @@ impl GatewayManager {
             match child.try_wait() {
                 Ok(Some(_)) => info!("Gateway exited"),
                 _ => {
-                    warn!("Gateway still alive, killing");
-                    let _ = child.kill();
+                    warn!("Gateway still alive, SIGKILL process group");
+                    #[cfg(unix)]
+                    {
+                        unsafe {
+                            libc::kill(-(pid as i32), libc::SIGKILL);
+                        }
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = child.kill();
+                    }
                     let _ = child.wait();
                 }
             }
@@ -354,7 +402,7 @@ impl GatewayManager {
             pid,
             owned_by_us: *owned_guard,
             port_open,
-            port: Some(port_now),
+            port: if port_open || running { Some(port_now) } else { None },
             message: None,
         })
     }
