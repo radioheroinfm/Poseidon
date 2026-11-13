@@ -382,3 +382,9 @@ npm run tauri build -- --debug  →  OK
 - внутри `GatewayManager`: `start_guard` только против двойного start
 - `validate_open_path` не режет `/tmp/12:30.txt`
 - CI: убран `|| true` у `tsc --noEmit`
+
+### 2026-11-13 — Верификация после снятия внешнего Mutex: GREEN
+
+cathedral:
+- cargo test → 8/8 ok
+- tauri build --debug → OK (deb/rpm/AppImage ~54 / ~54 / ~127 MiB)
