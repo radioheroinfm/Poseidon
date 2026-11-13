@@ -475,3 +475,8 @@ ADR-012 (закрытие эпохи только при зелёном CI) — 
 - hermesDesktop: getConnection, getGatewayWsUrl → Tauri
 - placeholder buttons: Ensure Gateway, WS URL
 - docs: EPOCH_3_STATUS, SPIKE1.md
+
+### 2026-11-13 — Safe stubs for hermesDesktop
+
+Proxy around P0: missing keys log once and return null stubs.
+Prepares Spike 1 mount of upstream renderer without undefined crashes.

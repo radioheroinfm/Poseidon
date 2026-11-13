@@ -142,8 +142,29 @@
           gatewayEnsure: () => invoke('gateway_ensure'),
         },
       };
-      statusEl.textContent = 'hermesDesktop P0+ live';
-      log('window.hermesDesktop P0+ (getGatewayWsUrl, getConnection, ensure)');
+      // Safe stubs for missing upstream keys (Spike 1)
+      const seen = new Set();
+      const stub = (path) => new Proxy(async () => null, {
+        get(_t, prop) {
+          if (prop === 'then') return undefined;
+          if (typeof prop === 'symbol') return undefined;
+          const p = path + '.' + String(prop);
+          if (!seen.has(p)) { seen.add(p); console.warn('[stub]', p); }
+          return stub(p);
+        },
+        apply() { if (!seen.has(path+'()')) { seen.add(path+'()'); console.warn('[stub call]', path); } return Promise.resolve(null); }
+      });
+      window.hermesDesktop = new Proxy(window.hermesDesktop, {
+        get(t, prop) {
+          if (prop in t) return t[prop];
+          const p = String(prop);
+          if (!seen.has(p)) { seen.add(p); console.warn('[stub missing]', p); }
+          return stub(p);
+        },
+        has() { return true; }
+      });
+      statusEl.textContent = 'hermesDesktop P0+ + stubs';
+      log('hermesDesktop P0+ with safe stubs for unknown keys');
     } else {
       statusEl.textContent = 'Tauri global API not found (open via tauri dev/build)';
       log('No __TAURI__ — browser-only preview');

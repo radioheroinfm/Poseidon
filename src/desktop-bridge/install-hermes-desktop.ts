@@ -4,6 +4,7 @@ import type {
   SystemInfo,
   ConnectionDescriptor,
 } from './hermes-desktop-types';
+import { withHermesStubs } from './hermes-desktop-proxy';
 
 type Invoke = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 
@@ -62,7 +63,8 @@ export function installHermesDesktopP0(): HermesDesktopP0 | null {
     },
   };
 
-  window.hermesDesktop = api;
-  console.log('[Poseidon] window.hermesDesktop P0+ installed');
-  return api;
+  const wrapped = withHermesStubs(api);
+  window.hermesDesktop = wrapped;
+  console.log('[Poseidon] window.hermesDesktop P0+ with stubs installed');
+  return wrapped;
 }

@@ -35,3 +35,10 @@ git rev-parse HEAD  # expect 2bd378ed or note drift
 - [ ] Window shows Hermes chat UI  
 - [ ] Can send a message and get a response via local gateway  
 - [ ] Closing Poseidon does not kill attached-only gateway; kills owned gateway  
+
+## Stub policy (implemented)
+
+`withHermesStubs` / placeholder Proxy:
+- Real P0 methods work.
+- Any other `hermesDesktop.*` access logs once and returns async null / nested stub.
+- Prevents hard crash when mounting upstream renderer before full API coverage.
