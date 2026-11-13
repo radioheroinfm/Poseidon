@@ -8,7 +8,7 @@ mod gateway;
 use bridge::*;
 use gateway::GatewayManager;
 use std::sync::Mutex;
-use tauri::RunEvent;
+use tauri::{Manager, RunEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

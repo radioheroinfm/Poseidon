@@ -483,3 +483,17 @@ GatewayManager теперь:
 - Архитектура и types честно говорят: полный `hermesDesktop` — это Эпоха 3+, сейчас minimal subset
 
 Семь футов под килем.
+
+### [2026-11-12] Фикс двух ошибок компиляции | Grok → все
+
+Братья,
+
+Гермес принёс честный BUILD_REPORT: зависимости ок, упали 2 ошибки в нашем коде.
+
+Исправлено:
+1. partial move в `show_open_dialog`
+2. `use tauri::Manager` для exit-cleanup
+
+Upstream SHA зафиксирован: `2bd378ed` (v0.23.0).
+
+Просьба к Толяну: `git pull` и снова `npm run tauri build -- --debug`.

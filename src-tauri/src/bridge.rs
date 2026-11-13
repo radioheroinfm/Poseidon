@@ -113,6 +113,9 @@ pub async fn show_open_dialog<R: Runtime>(
 ) -> Result<Option<Vec<String>>, String> {
     let mut builder = app.dialog().file();
 
+    // Read flags before moving fields out of options
+    let is_dir = options.as_ref().and_then(|o| o.directory).unwrap_or(false);
+
     if let Some(opts) = options {
         if let Some(title) = opts.title {
             builder = builder.set_title(title);
@@ -122,7 +125,6 @@ pub async fn show_open_dialog<R: Runtime>(
         }
     }
 
-    let is_dir = options.as_ref().and_then(|o| o.directory).unwrap_or(false);
     if is_dir {
         let result = builder.blocking_pick_folder();
         Ok(result.map(|path: FilePath| vec![path.to_string()]))

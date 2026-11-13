@@ -298,3 +298,12 @@ Spawn больше не заглушка. Если `hermes` есть в сист
 - На `RunEvent::Exit` вызывается `gateway.stop()` только для owned-процесса
 - `ARCHITECTURE.md` дополнен блоком Upstream reality check
 - В types.ts зафиксирована стратегия minimal subset `hermesDesktop` (полный паритет = Эпоха 3+)
+
+### 2026-11-12 — Фикс компиляции после отчёта Гермеса
+
+**Что сделано (Grok):**
+- E0382 в `show_open_dialog`: читаем `directory` до partial move полей options
+- E0599 в `lib.rs`: добавлен `use tauri::Manager` для `try_state`
+- Зафиксирован upstream SHA: `2bd378ed` / `v0.23.0`
+
+**Следующий шаг:** повторная сборка на машине Толяна.
