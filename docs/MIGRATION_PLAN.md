@@ -73,12 +73,13 @@
 
 ---
 
-## Эпоха 3 — Интеграция (предварительно)
+## Эпоха 3 — PRELOAD_MAP + Spike 1 (активна)
 
-- Подключение реального React-рендерера Hermes через bridge
-- События окна (`onWindowStateChange`) для кастомного тайтлбара
-- Полноценные диалоги (folder, multiple, filters)
-- Первая полезная сборка Desktop для пользователей
+См. `docs/EPOCH_3_PLAN.md` и `docs/upstream/PRELOAD_MAP.md`.
+
+- Карта ~166 ключей hermesDesktop, P0 для первого чата
+- Nested API shape (ADR-014), не плоский выдуманный
+- Spike 1: настоящий React Hermes в Tauri + чат через gateway
 
 ---
 

@@ -94,3 +94,12 @@ Tauri-оболочка — первый кирпич.
 6. Attach к Gateway по открытому порту — временная эвристика; позже handshake/идентичность.
 
 Дальнейшее ужесточение CSP и отказ от `unsafe-inline` — отдельными шагами после первой зелёной сборки.
+
+## ADR-014: Epoch 3 — API shape is upstream hermesDesktop
+**Status**: Accepted  
+**Date**: 2026-11-13  
+**Source**: Kolyan Report #5 (R4)
+
+Плоский `PoseidonDesktopAPI` остаётся внутренним helper-слоем только если нужен.  
+**Renderer видит `window.hermesDesktop` вложенной формы апстрима**, заполняемой по PRIORITY из PRELOAD_MAP.  
+Не расширяем API «на глаз». Spike 1 = реальный React Hermes + работающий чат через шлюз.

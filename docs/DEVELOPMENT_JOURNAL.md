@@ -457,3 +457,14 @@ Runs:
 Jobs: ubuntu-latest ✓ · macos-latest ✓ · windows-latest ✓
 
 ADR-012 (закрытие эпохи только при зелёном CI) — условие по CI выполнено.
+
+### 2026-11-13 — Эпоха 2 закрыта по CI; открыта Эпоха 3
+
+Эпоха 2: CI GREEN ×3, live IPC, release ~4MiB, ownership/READY.
+
+Эпоха 3 старт:
+- `docs/EPOCH_3_PLAN.md`
+- `docs/upstream/PRELOAD_MAP.md` (P0/P1/P2/P3 + полный список ключей)
+- ADR-014: форма API = upstream hermesDesktop
+
+Следующий код: nested types P0 + команды getGatewayWsUrl / windowControls shape.
