@@ -1,7 +1,6 @@
 /**
- * Nested hermesDesktop shape (upstream-aligned) — Epoch 3 P0 subset.
- * Full map: docs/upstream/PRELOAD_MAP.md
- * SHA: 2bd378ed (v0.23.0)
+ * Nested hermesDesktop — Epoch 3 expanding P0 toward Spike 1.
+ * Map: docs/upstream/PRELOAD_MAP.md · SHA 2bd378ed
  */
 
 export type Platform = 'darwin' | 'win32' | 'linux';
@@ -23,7 +22,6 @@ export interface SystemInfo {
   isTauri: boolean;
 }
 
-/** P0 windowControls — matches preload structure */
 export interface WindowControls {
   custom: boolean;
   minimize: () => void | Promise<void>;
@@ -31,25 +29,30 @@ export interface WindowControls {
   close: () => void | Promise<void>;
 }
 
-/**
- * P0 slice of window.hermesDesktop for Spike 1 bootstrapping.
- * Expand only from PRELOAD_MAP priorities.
- */
+/** Connection-ish stub until full registry ported */
+export interface ConnectionDescriptor {
+  kind: 'local' | 'none';
+  wsUrl: string | null;
+  port: number | null;
+  status: GatewayStatus;
+}
+
 export interface HermesDesktopP0 {
   windowControls: WindowControls;
 
   getVersion: (scope?: { connectionId?: string; profile?: string }) => Promise<string>;
   getGatewayWsUrl: (profile?: string) => Promise<string | null>;
-  getBootProgress: () => Promise<unknown>;
-
+  getConnection: (profile?: string) => Promise<ConnectionDescriptor>;
+  getBootProgress: () => Promise<Record<string, unknown>>;
   openExternal: (url: string) => Promise<void>;
 
-  /** Poseidon extensions during transition (not in upstream) */
-  __poseidon?: {
+  /** Poseidon-native helpers during migration */
+  __poseidon: {
     getSystemInfo: () => Promise<SystemInfo>;
     gatewayStart: () => Promise<GatewayStatus>;
     gatewayStop: () => Promise<GatewayStatus>;
     gatewayStatus: () => Promise<GatewayStatus>;
+    gatewayEnsure: () => Promise<GatewayStatus>;
   };
 }
 

@@ -1,9 +1,9 @@
-/**
- * Install nested window.hermesDesktop (P0) using Tauri invoke.
- * Epoch 3 — ADR-014
- */
-
-import type { HermesDesktopP0, GatewayStatus, SystemInfo } from './hermes-desktop-types';
+import type {
+  HermesDesktopP0,
+  GatewayStatus,
+  SystemInfo,
+  ConnectionDescriptor,
+} from './hermes-desktop-types';
 
 type Invoke = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 
@@ -16,7 +16,7 @@ function getInvoke(): Invoke | null {
 export function installHermesDesktopP0(): HermesDesktopP0 | null {
   const invoke = getInvoke();
   if (!invoke) {
-    console.warn('[Poseidon] no __TAURI__.core.invoke — hermesDesktop not installed');
+    console.warn('[Poseidon] no __TAURI__.core.invoke');
     return null;
   }
 
@@ -28,23 +28,26 @@ export function installHermesDesktopP0(): HermesDesktopP0 | null {
       close: () => { void invoke('window_close'); },
     },
 
-    getVersion: async () => {
-      const v = await invoke('get_version');
-      return String(v ?? '0.1.0');
-    },
+    getVersion: async () => String((await invoke('get_version')) ?? '0.1.0'),
 
     getGatewayWsUrl: async () => {
-      const st = (await invoke('gateway_status')) as GatewayStatus;
-      if (st?.portOpen && st.port) {
-        return `ws://127.0.0.1:${st.port}`;
-      }
-      // try start? Spike 1 policy: status only; start explicit later
-      return null;
+      const url = await invoke('get_gateway_ws_url');
+      return (url as string | null) ?? null;
     },
 
-    getBootProgress: async () => {
-      return { phase: 'poseidon-shell', ready: true };
+    getConnection: async () => {
+      const st = (await invoke('gateway_status')) as GatewayStatus;
+      const wsUrl =
+        st?.portOpen && st.port ? `ws://127.0.0.1:${st.port}` : null;
+      return {
+        kind: wsUrl ? 'local' : 'none',
+        wsUrl,
+        port: st?.port ?? null,
+        status: st,
+      } satisfies ConnectionDescriptor;
     },
+
+    getBootProgress: async () => ({ phase: 'poseidon-shell', ready: true }),
 
     openExternal: async (url: string) => {
       await invoke('open_external', { url });
@@ -55,10 +58,11 @@ export function installHermesDesktopP0(): HermesDesktopP0 | null {
       gatewayStart: () => invoke('gateway_start') as Promise<GatewayStatus>,
       gatewayStop: () => invoke('gateway_stop') as Promise<GatewayStatus>,
       gatewayStatus: () => invoke('gateway_status') as Promise<GatewayStatus>,
+      gatewayEnsure: () => invoke('gateway_ensure') as Promise<GatewayStatus>,
     },
   };
 
   window.hermesDesktop = api;
-  console.log('[Poseidon] window.hermesDesktop (P0) installed');
+  console.log('[Poseidon] window.hermesDesktop P0+ installed');
   return api;
 }

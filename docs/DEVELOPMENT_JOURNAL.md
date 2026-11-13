@@ -468,3 +468,10 @@ ADR-012 (закрытие эпохи только при зелёном CI) — 
 - ADR-014: форма API = upstream hermesDesktop
 
 Следующий код: nested types P0 + команды getGatewayWsUrl / windowControls shape.
+
+### 2026-11-13 — Эпоха 3: P0+ WS URL + gateway_ensure
+
+- Rust commands: `get_gateway_ws_url`, `gateway_ensure`
+- hermesDesktop: getConnection, getGatewayWsUrl → Tauri
+- placeholder buttons: Ensure Gateway, WS URL
+- docs: EPOCH_3_STATUS, SPIKE1.md

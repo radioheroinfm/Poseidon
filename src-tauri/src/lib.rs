@@ -40,6 +40,8 @@ pub fn run() {
             gateway_start,
             gateway_stop,
             gateway_status,
+            get_gateway_ws_url,
+            gateway_ensure,
         ])
         .setup(|_app| {
             log::info!(

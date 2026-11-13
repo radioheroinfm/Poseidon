@@ -87,6 +87,8 @@
   <div class="row">
     <button id="btn-info">System Info</button>
     <button id="btn-gateway">Gateway Status</button>
+    <button id="btn-ensure">Ensure Gateway</button>
+    <button id="btn-ws">WS URL</button>
     <button id="btn-min">Minimize</button>
     <button id="btn-close">Close</button>
   </div>
@@ -124,10 +126,11 @@
           close: () => invoke('window_close'),
         },
         getVersion: async () => String(await invoke('get_version') ?? '0.1.0'),
-        getGatewayWsUrl: async () => {
+        getGatewayWsUrl: async () => await invoke('get_gateway_ws_url'),
+        getConnection: async () => {
           const st = await invoke('gateway_status');
-          if (st && st.portOpen && st.port) return 'ws://127.0.0.1:' + st.port;
-          return null;
+          const wsUrl = st && st.portOpen && st.port ? ('ws://127.0.0.1:' + st.port) : null;
+          return { kind: wsUrl ? 'local' : 'none', wsUrl, port: st?.port ?? null, status: st };
         },
         getBootProgress: async () => ({ phase: 'poseidon-shell', ready: true }),
         openExternal: async (url) => { await invoke('open_external', { url }); },
@@ -136,10 +139,11 @@
           gatewayStart: () => invoke('gateway_start'),
           gatewayStop: () => invoke('gateway_stop'),
           gatewayStatus: () => invoke('gateway_status'),
+          gatewayEnsure: () => invoke('gateway_ensure'),
         },
       };
-      statusEl.textContent = 'hermesDesktop P0 live + Tauri IPC';
-      log('window.hermesDesktop installed (Epoch 3 P0)');
+      statusEl.textContent = 'hermesDesktop P0+ live';
+      log('window.hermesDesktop P0+ (getGatewayWsUrl, getConnection, ensure)');
     } else {
       statusEl.textContent = 'Tauri global API not found (open via tauri dev/build)';
       log('No __TAURI__ — browser-only preview');
@@ -161,6 +165,8 @@
 
     document.getElementById('btn-info').onclick = () => call('get_system_info');
     document.getElementById('btn-gateway').onclick = () => call('gateway_status');
+    document.getElementById('btn-ensure').onclick = () => call('gateway_ensure');
+    document.getElementById('btn-ws').onclick = () => call('get_gateway_ws_url');
     document.getElementById('btn-min').onclick = () => call('window_minimize');
     document.getElementById('btn-close').onclick = () => call('window_close');
 

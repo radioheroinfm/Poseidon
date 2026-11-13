@@ -298,3 +298,35 @@ mod tests {
         assert!(validate_open_path("C:\\Users\\test").is_ok()); // Windows drive
     }
 }
+
+
+/// WS URL for renderer (Epoch 3 P0). Null if gateway not up.
+#[tauri::command]
+pub async fn get_gateway_ws_url(
+    state: State<'_, Arc<GatewayManager>>,
+) -> Result<Option<String>, String> {
+    let st = state.status()?;
+    if st.port_open {
+        if let Some(port) = st.port {
+            return Ok(Some(format!("ws://127.0.0.1:{}", port)));
+        }
+    }
+    Ok(None)
+}
+
+/// Ensure gateway is running; return status + ws URL for Spike 1 boot.
+#[tauri::command]
+pub async fn gateway_ensure(
+    state: State<'_, Arc<GatewayManager>>,
+) -> Result<GatewayStatus, String> {
+    let mgr = Arc::clone(&state);
+    tauri::async_runtime::spawn_blocking(move || {
+        let st = mgr.status()?;
+        if st.running && st.port_open {
+            return Ok(st);
+        }
+        mgr.start()
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
