@@ -414,3 +414,12 @@ cathedral подтвердил `aca12f4`:
 - rustc 1.99.1 / cargo 1.99.1 / node v24.21.0
 
 Лог: `docs/reports/BUILD_REPORT_2026-11-13.md`
+
+### 2026-11-13 — Release metrics
+
+cathedral release build:
+- deb **4.07 MiB**
+- rpm **4.08 MiB**
+- AppImage **83.88 MiB**
+
+Записано в `docs/METRICS.md`. Electron baseline ещё нет.

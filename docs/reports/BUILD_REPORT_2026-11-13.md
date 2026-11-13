@@ -48,3 +48,14 @@ Window opens. GTK note (non-fatal):
 - R1/R5 changes compile and pass unit tests.
 - CI still not enabled in `.github/workflows/` (ADR-012 open).
 - Release build and Electron baseline not measured in this report.
+
+## Release build (same host, later)
+
+```
+Finished 3 bundles at:
+  Poseidon_0.1.0_amd64.deb          4.07 MiB
+  Poseidon-0.1.0-1.x86_64.rpm       4.08 MiB
+  Poseidon_0.1.0_amd64.AppImage    83.88 MiB
+```
+
+Release deb/rpm ~13× smaller than debug. AppImage still carries runtime bulk.

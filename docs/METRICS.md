@@ -2,32 +2,41 @@
 
 > ADR-011: честные измерения.
 
-## Первая успешная сборка (debug)
+## Release build (Linux x86_64) — 2026-11-13
 
-| Дата | Платформа | Метрика | Значение | Примечание |
-|------|-----------|---------|----------|------------|
-| 2026-11-12 | Linux x86_64 | deb (debug) | **53.89 MiB** | Poseidon_0.1.0_amd64.deb |
-| 2026-11-12 | Linux x86_64 | rpm (debug) | **53.89 MiB** | Poseidon-0.1.0-1.x86_64.rpm |
-| 2026-11-12 | Linux x86_64 | AppImage (debug) | **127.10 MiB** | Poseidon_0.1.0_amd64.AppImage |
-| 2026-11-12 | Linux x86_64 | binary path | `.../debug/poseidon-desktop` | cargo target |
+| Артефакт | Размер | Примечание |
+|----------|--------|------------|
+| **deb** | **4.07 MiB** | Poseidon_0.1.0_amd64.deb |
+| **rpm** | **4.08 MiB** | Poseidon-0.1.0-1.x86_64.rpm |
+| **AppImage** | **83.88 MiB** | Poseidon_0.1.0_amd64.AppImage (тянет runtime) |
 
-**Важно:** это **debug**-сборка (`--debug`). Release будет заметно меньше.  
-Сравнение с Electron baseline — ещё не проводилось.
+Host: cathedral · rustc 1.99.1 · commit ~`aca12f4` / release profile  
+Лог: `docs/reports/BUILD_REPORT_2026-11-13.md` (debug) + этот release-замер.
 
-## Методика (как будем мерить дальше)
+## Debug build (для сравнения)
 
-| Метрика | Как измеряем | Baseline |
-|---------|--------------|----------|
-| Размер установщика | артефакт `tauri build` (release) | Electron Hermes Desktop |
-| Холодный старт | время до показа окна (avg 5) | Electron |
-| Память (RSS) | после старта + 30с простоя | Electron |
+| Артефакт | Размер |
+|----------|--------|
+| deb | ~54 MiB |
+| rpm | ~54 MiB |
+| AppImage | ~127 MiB |
 
-## Разделение (обязательно)
+## Ещё не измерено
 
-1. **Чистая оболочка** (Tauri only)
-2. **Оболочка + Python runtime** (если бандлим)
+| Метрика | Статус |
+|---------|--------|
+| Холодный старт (окно) | ⏳ |
+| RSS после старта / 30с | ⏳ |
+| Electron Hermes Desktop baseline (та же машина) | ⏳ |
+| Размер с бандленным Python runtime | n/a (пока оболочка only) |
 
-## Источник baseline
+## Методика
 
-- Hermes Desktop (Electron), SHA: `2bd378ed` / v0.23.0
-- Машина: cathedral (Linux), rustc 1.99.1
+1. **Чистая оболочка** (Tauri only) — то, что выше.
+2. **Оболочка + Python runtime** — когда/если бандлим.
+
+Сравнение с Electron — только на той же машине, same-day, без подмены «голый Tauri vs полный дистрибутив».
+
+## Upstream baseline target
+
+- Hermes Desktop (Electron), SHA `2bd378ed` / v0.23.0

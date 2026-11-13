@@ -16,7 +16,7 @@
 
 ## Ещё открыто
 
-- [ ] Release-сборка + реальные размеры
+- [x] Release-сборка: deb 4.07 / rpm 4.08 / AppImage 83.88 MiB (2026-11-13)
 - [ ] CI зелёный на 3 ОС (workflow template есть, нужен enable)
 - [ ] Полный diff preload vs bridge
 - [ ] Ужесточение CSP / handshake шлюза
