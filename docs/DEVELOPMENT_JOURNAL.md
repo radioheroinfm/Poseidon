@@ -432,3 +432,12 @@ cathedral release build:
 - авто-probe System Info при загрузке
 
 Проверка: `npm run tauri dev` → нажать System Info → JSON из Rust.
+
+### 2026-11-13 — Live IPC confirmed
+
+Окно вернуло:
+```json
+{"platform":"linux","arch":"x86_64","version":"0.1.0","tauriVersion":"2.12.5","isTauri":true}
+```
+
+Смоук: System Info через `__TAURI__.core.invoke` — живой JSON из Rust.
