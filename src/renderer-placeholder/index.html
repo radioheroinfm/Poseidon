@@ -115,8 +115,31 @@
     const invoke = getInvoke();
 
     if (invoke) {
-      statusEl.textContent = 'Tauri IPC live (window.__TAURI__)';
-      log('invoke ready — try the buttons');
+      // Epoch 3 P0: nested hermesDesktop
+      window.hermesDesktop = {
+        windowControls: {
+          custom: true,
+          minimize: () => invoke('window_minimize'),
+          toggleMaximize: () => invoke('window_maximize'),
+          close: () => invoke('window_close'),
+        },
+        getVersion: async () => String(await invoke('get_version') ?? '0.1.0'),
+        getGatewayWsUrl: async () => {
+          const st = await invoke('gateway_status');
+          if (st && st.portOpen && st.port) return 'ws://127.0.0.1:' + st.port;
+          return null;
+        },
+        getBootProgress: async () => ({ phase: 'poseidon-shell', ready: true }),
+        openExternal: async (url) => { await invoke('open_external', { url }); },
+        __poseidon: {
+          getSystemInfo: () => invoke('get_system_info'),
+          gatewayStart: () => invoke('gateway_start'),
+          gatewayStop: () => invoke('gateway_stop'),
+          gatewayStatus: () => invoke('gateway_status'),
+        },
+      };
+      statusEl.textContent = 'hermesDesktop P0 live + Tauri IPC';
+      log('window.hermesDesktop installed (Epoch 3 P0)');
     } else {
       statusEl.textContent = 'Tauri global API not found (open via tauri dev/build)';
       log('No __TAURI__ — browser-only preview');
