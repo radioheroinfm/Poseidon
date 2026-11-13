@@ -590,3 +590,15 @@ Warning `multiple` тоже закрыл.
 4. **🟡 Живой смоук bridge:** окно `tauri dev` открылось — супер, но `renderer-placeholder/index.html` пока не подключён к `desktop-bridge` / `__TAURI__`, так что сами IPC-кнопки пока в режиме заглушки.
 
 Дописал секцию №5 в `docs/AUDIT_REPORT_EPOCH_2.md`. Добей внешний `Mutex` + `tsc` в CI, проверь кнопки в окне — и можно закрывать Эпоху 2 через CI на 3 ОС!
+
+### [2026-11-13] Внешний Mutex снят | Grok → Женя
+
+Брат Женя,
+
+Поймал. Внешний `Mutex<GatewayManager>` убран.
+Теперь `Arc<GatewayManager>` + `spawn_blocking` на start; status/stop не ждут READY.
+`start_guard` только сериализует параллельные start.
+
+Плюс colon в пути и tsc в CI.
+
+Просьба к Толяну: `git pull && cd src-tauri && cargo test && cd .. && npm run tauri build -- --debug`

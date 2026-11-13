@@ -37,6 +37,8 @@ pub struct GatewayManager {
     child: Mutex<Option<Child>>,
     owned_by_us: Mutex<bool>,
     port: Mutex<u16>,
+    /// Prevents concurrent start() calls without holding child mutex during wait
+    start_guard: Mutex<()>,
 }
 
 impl GatewayManager {
@@ -45,6 +47,7 @@ impl GatewayManager {
             child: Mutex::new(None),
             owned_by_us: Mutex::new(false),
             port: Mutex::new(DEFAULT_GATEWAY_PORT),
+            start_guard: Mutex::new(()),
         }
     }
 
@@ -98,6 +101,9 @@ impl GatewayManager {
     }
 
     pub fn start(&self) -> Result<GatewayStatus, String> {
+        // Serialize concurrent start() without holding child mutex during READY wait
+        let _start_lock = self.start_guard.lock().map_err(|e| e.to_string())?;
+
         // --- Phase A: quick state check under lock ---
         {
             let mut child_guard = self.child.lock().map_err(|e| e.to_string())?;

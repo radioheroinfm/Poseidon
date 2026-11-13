@@ -7,7 +7,7 @@ mod gateway;
 
 use bridge::*;
 use gateway::GatewayManager;
-use std::sync::Mutex;
+use std::sync::Arc;
 use tauri::{Manager, RunEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -17,7 +17,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .manage(Mutex::new(GatewayManager::new()))
+        .manage(Arc::new(GatewayManager::new()))
         .invoke_handler(tauri::generate_handler![
             // System
             get_system_info,
@@ -53,12 +53,10 @@ pub fn run() {
         .run(|app, event| {
             // On exit: stop only the gateway we own (ADR-009)
             if let RunEvent::Exit = event {
-                if let Some(state) = app.try_state::<Mutex<GatewayManager>>() {
-                    if let Ok(mgr) = state.lock() {
-                        match mgr.stop() {
-                            Ok(status) => log::info!("Exit cleanup: {:?}", status.message),
-                            Err(e) => log::warn!("Exit cleanup error: {}", e),
-                        }
+                if let Some(state) = app.try_state::<Arc<GatewayManager>>() {
+                    match state.stop() {
+                        Ok(status) => log::info!("Exit cleanup: {:?}", status.message),
+                        Err(e) => log::warn!("Exit cleanup error: {}", e),
                     }
                 }
             }

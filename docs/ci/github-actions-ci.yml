@@ -40,7 +40,7 @@ jobs:
         run: cargo fmt --check || true
 
       - name: Typecheck frontend
-        run: npx tsc --noEmit || true
+        run: npx tsc --noEmit
 
       - name: Cargo test
         working-directory: src-tauri

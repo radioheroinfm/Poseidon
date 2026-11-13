@@ -4,7 +4,7 @@ use crate::gateway::{GatewayManager, GatewayStatus};
 use tauri::{AppHandle, Manager, Runtime, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use serde::Serialize;
-use std::sync::Mutex;
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -188,16 +188,31 @@ fn validate_open_path(path: &str) -> Result<(), String> {
         return Err("open_path: empty path".into());
     }
     let lower = trimmed.to_lowercase();
-    // Block URL-like schemes. Note: "javascript:foo" has no "://".
+    // Block URL-like schemes. "javascript:foo" has no "://".
+    // Only treat as scheme if prefix is [a-z][a-z0-9+.-]* and does not contain '/'.
+    // This allows paths like "/tmp/12:30.txt".
     if let Some(idx) = lower.find(':') {
         let scheme = &lower[..idx];
-        // Allow plain Windows paths like "C:\foo" (single letter scheme)
-        let is_windows_drive = scheme.len() == 1 && scheme.as_bytes()[0].is_ascii_alphabetic();
-        if !is_windows_drive && scheme != "file" {
-            return Err(format!(
-                "open_path: blocked path with scheme '{}': {}",
-                scheme, path
-            ));
+        let is_scheme = !scheme.is_empty()
+            && !scheme.contains('/')
+            && scheme
+                .chars()
+                .enumerate()
+                .all(|(i, c)| {
+                    if i == 0 {
+                        c.is_ascii_alphabetic()
+                    } else {
+                        c.is_ascii_alphanumeric() || c == '+' || c == '.' || c == '-'
+                    }
+                });
+        if is_scheme {
+            let is_windows_drive = scheme.len() == 1;
+            if !is_windows_drive && scheme != "file" {
+                return Err(format!(
+                    "open_path: blocked path with scheme '{}': {}",
+                    scheme, path
+                ));
+            }
         }
     }
     Ok(())
@@ -231,26 +246,26 @@ pub async fn quit_app<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn gateway_start(
-    state: State<'_, Mutex<GatewayManager>>,
+    state: State<'_, Arc<GatewayManager>>,
 ) -> Result<GatewayStatus, String> {
-    let mgr = state.lock().map_err(|e| e.to_string())?;
-    mgr.start()
+    let mgr = Arc::clone(&state);
+    tauri::async_runtime::spawn_blocking(move || mgr.start())
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn gateway_stop(
-    state: State<'_, Mutex<GatewayManager>>,
+    state: State<'_, Arc<GatewayManager>>,
 ) -> Result<GatewayStatus, String> {
-    let mgr = state.lock().map_err(|e| e.to_string())?;
-    mgr.stop()
+    state.stop()
 }
 
 #[tauri::command]
 pub async fn gateway_status(
-    state: State<'_, Mutex<GatewayManager>>,
+    state: State<'_, Arc<GatewayManager>>,
 ) -> Result<GatewayStatus, String> {
-    let mgr = state.lock().map_err(|e| e.to_string())?;
-    mgr.status()
+    state.status()
 }
 
 
@@ -279,6 +294,7 @@ mod tests {
         assert!(validate_open_path("data:text/html,hi").is_err());
         assert!(validate_open_path("http://example.com").is_err());
         assert!(validate_open_path("/tmp/test.txt").is_ok());
+        assert!(validate_open_path("/tmp/12:30.txt").is_ok()); // colon in filename
         assert!(validate_open_path("C:\\Users\\test").is_ok()); // Windows drive
     }
 }

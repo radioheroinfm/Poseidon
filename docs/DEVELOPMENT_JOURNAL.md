@@ -371,3 +371,14 @@ npm run tauri build -- --debug  →  OK
 - Подтверждено закрытие падающего теста `javascript:foo`, фонового дренирования `stdout` и сброса `owned_by_us`.
 - Выявлен остаточный внешний `Mutex<GatewayManager>` в `lib.rs` / `bridge.rs`, который всё ещё блокирует `status/stop/Exit` на время `start()`, а также ложное срабатывание `validate_open_path` на Unix-путях с `:` и `|| true` в `tsc` шаге CI.
 - Детали добавлены в `docs/AUDIT_REPORT_EPOCH_2.md` (раздел 5).
+
+### 2026-11-13 — Повторная ревизия Жени: внешний Mutex убран
+
+**Находка Жени:** `State<Mutex<GatewayManager>>` + `state.lock()` в `gateway_start` снова держал глобальный лок на время READY (до 60с), блокируя status/stop/Exit.
+
+**Фикс:**
+- `manage(Arc<GatewayManager>)` — без внешнего Mutex
+- `gateway_start` → `spawn_blocking`
+- внутри `GatewayManager`: `start_guard` только против двойного start
+- `validate_open_path` не режет `/tmp/12:30.txt`
+- CI: убран `|| true` у `tsc --noEmit`
