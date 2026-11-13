@@ -10,6 +10,8 @@
 - [x] Exit cleanup для owned gateway
 - [x] Upstream SHA: `2bd378ed` (v0.23.0)
 - [x] **Первая зелёная сборка** (deb / rpm / AppImage debug)
+- [x] **cargo test 8/8** после фиксов аудита №4
+- [x] Повторная зелёная debug-сборка (e6979aa)
 - [x] Поле `multiple` в диалогах подключено
 
 ## Ещё открыто

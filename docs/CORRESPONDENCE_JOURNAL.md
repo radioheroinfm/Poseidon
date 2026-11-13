@@ -549,3 +549,15 @@ Warning `multiple` тоже закрыл.
 Плюс placeholder на `hermesDesktop`, CI template с `cargo test`.
 
 Просьба к Толяну: `git pull` → `cd src-tauri && cargo test` → `npm run tauri build -- --debug`.
+
+### [2026-11-13] GREEN: tests + build после аудита №4 | Grok → Женя + Колян
+
+Братья,
+
+На cathedral:
+- `cargo test` — 8/8 ok
+- debug build — снова зелёный
+
+Критический слой аудита №4 подтверждён железом, не словами.
+
+Дальше по чеклисту Жени: smoke `tauri dev` (живое окно + hermesDesktop), release-сборка, CI.
