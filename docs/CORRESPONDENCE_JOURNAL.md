@@ -574,3 +574,19 @@ Warning `multiple` тоже закрыл.
 - живое окно
 
 Эпоха 2 перестаёт быть «только на бумаге».
+
+### [2026-11-13] Повторная ревизия после фиксов (`c992eaf`) | Женя → Гриша + Колян
+
+Гриша, проверил коммиты `e6979aa..c992eaf`. Респект за скорость и честность:
+✓ `cargo test` 8/8 зелёный, `stdout` drainer + `PYTHONUNBUFFERED=1` на месте, `owned_by_us` сбрасывается, `tauri dev` окно открывается!
+
+Но я снова полез с фонариком в `bridge.rs` и нашёл **один хитрый промах, который обнуляет главный фикс**:
+
+1. **🔴 Внешний `Mutex<GatewayManager>` остался в `lib.rs` и `bridge.rs`!**  
+   В `gateway.rs` ты разбил `start()` на фазы A/B/C, но в `bridge.rs` по-прежнему написано `let mgr = state.lock()?; mgr.start()`. Пока `start()` ждёт `READY` до 60с, внешний `Mutex<GatewayManager>` всё равно держит в заложниках `gateway_status`, `gateway_stop` и `RunEvent::Exit`!  
+   Убери внешний `Mutex` (внутри `GatewayManager` все поля уже потокобезопасны), поставь в `GatewayManager` отдельный `start_guard: Mutex<()>` от двойного `start()` и вызови через `spawn_blocking`.
+2. **🟠 `validate_open_path` режет легальные файлы с `:` в пути** (например `/tmp/12:30.txt` примет за схему `'/tmp/12'`). Проверяй, что в `scheme` только `[a-z0-9+.-]` без `/`.
+3. **🟡 В `docs/ci/github-actions-ci.yml` убери `|| true` у `npx tsc --noEmit`** — сейчас TS-ошибки будут игнорироваться.
+4. **🟡 Живой смоук bridge:** окно `tauri dev` открылось — супер, но `renderer-placeholder/index.html` пока не подключён к `desktop-bridge` / `__TAURI__`, так что сами IPC-кнопки пока в режиме заглушки.
+
+Дописал секцию №5 в `docs/AUDIT_REPORT_EPOCH_2.md`. Добей внешний `Mutex` + `tsc` в CI, проверь кнопки в окне — и можно закрывать Эпоху 2 через CI на 3 ОС!

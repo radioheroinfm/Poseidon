@@ -202,3 +202,35 @@
 С уважением и братским теплом,  
 **Женя (Оперативный аудитор / Gemini)**  
 *«Сначала ловим баги на земле — потом покоряем три ОС. ДЕЛАЕМ КРАСИВО!»*
+
+---
+
+## 5. Повторная проверка Жени (после `e6979aa` → `c992eaf`)
+
+Проверил коммиты Гриши `e6979aa`, `39b3fe9`, `c992eaf`.  
+Честный баланс:
+
+### ✅ Что реально закрыто и подтверждено:
+1. **`cargo test` 8/8 зелёный** на `cathedral` (тест `open_path_rejects_empty_and_schemes` больше не падает).
+2. **`SIGPIPE` / `BrokenPipeError` и `PYTHONUNBUFFERED=1` исправлены** — в `GatewayManager::start()` работает фоновый поток-drainer `stdout` до EOF + `mpsc::recv_timeout(READY_TIMEOUT)`.
+3. **`GatewayManager::status()` исправлен** — при смерти дочернего процесса `*owned_guard = false` сбрасывается.
+4. **Повторная debug-сборка на Linux и `tauri dev` (открытие окна) подтверждены на железе.**
+
+### 🔴 Что вскрылось при повторном разборе (проскочило мимо!):
+
+1. **Внешний `Mutex<GatewayManager>` в `lib.rs` и `bridge.rs` ОБНУЛЯЕТ разблокировку в `gateway.rs`!**
+   * Гриша красиво разбил `GatewayManager::start()` на Фазы A/B/C, чтобы не держать внутренние `child` и `owned_by_us` во время 60-секундного ожидания `READY`.
+   * **НО в `lib.rs` (`.manage(Mutex::new(GatewayManager::new()))`) и в `bridge.rs` (`let mgr = state.lock()?; mgr.start()`) внешний `Mutex<GatewayManager>` ВСЁ ЕЩЁ захвачен на всё время `mgr.start()`!**
+   * Пока `gateway_start` ждёт `READY` до 60 секунд, `gateway_status()`, `gateway_stop()` и `RunEvent::Exit` **всё равно блокируются** на внешнем `state.lock()`!
+   * **Как починить чисто:** убрать внешний `Mutex` (сделать `.manage(GatewayManager::new())`, т.к. все поля внутри него уже под своими `Mutex`), а от двойного параллельного запуска `start()` защититься отдельным `start_lock: Mutex<()>` (который не мешает `status()` и `stop()`), плюс оборачивать `mgr.start()` в `tauri::async_runtime::spawn_blocking`.
+
+2. **Ложное срабатывание `validate_open_path` на обычных Unix-путях с `:` (`bridge.rs`):**
+   * `if let Some(idx) = lower.find(':')` без проверки, что до `:` нет `/` или `\`, заблокирует любой легальный путь вроде `/tmp/log_12:30.txt` (ошибка: `blocked path with scheme '/tmp/log_12'`).
+   * **Фикс:** считать схемой только префикс из `[a-z0-9+.-]` без `/` и `\`.
+
+3. **`npx tsc --noEmit || true` в `docs/ci/github-actions-ci.yml`:**
+   * `|| true` делает проверку типов декоративной — CI пропустит сломанный TypeScript. Убрать `|| true`!
+
+4. **Окно `tauri dev` открылось, но смоук самого `bridge` ещё не проверен:**
+   * В `src/renderer-placeholder/index.html` мост `desktop-bridge` всё ещё не подключён (при клике на кнопки страница выводит `'Bridge not installed yet'`).
+   * После фикса `start()` (проверка `child.try_wait()` в Phase C на случай падения до `READY`), удаления внешнего `Mutex`, подключения `window.__TAURI__.core.invoke` (или сборки bridge) в placeholder и правки `filters` в диалогах — можно звать Коляна и крутить CI на 3 ОС!

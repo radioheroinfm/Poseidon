@@ -366,3 +366,8 @@ npm run tauri build -- --debug  →  OK
 - `npm run tauri dev` → окно Poseidon открылось, всё ок.
 
 Это закрывает пункт смоука из чеклиста Жени (Шаг 0 / живой запуск).
+
+### 2026-11-13 — Повторная проверка фиксов (`c992eaf`, Женя)
+- Подтверждено закрытие падающего теста `javascript:foo`, фонового дренирования `stdout` и сброса `owned_by_us`.
+- Выявлен остаточный внешний `Mutex<GatewayManager>` в `lib.rs` / `bridge.rs`, который всё ещё блокирует `status/stop/Exit` на время `start()`, а также ложное срабатывание `validate_open_path` на Unix-путях с `:` и `|| true` в `tsc` шаге CI.
+- Детали добавлены в `docs/AUDIT_REPORT_EPOCH_2.md` (раздел 5).
