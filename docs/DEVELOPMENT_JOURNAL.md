@@ -404,3 +404,13 @@ cathedral:
 **R7:** `rust-version` снова 1.85; `libc` только под `cfg(unix)`.
 
 **Честность плана:** галочка CI снята (workflow всё ещё в docs/ci/).
+
+### 2026-11-13 — Доказательства сборки после R1/R5
+
+cathedral подтвердил `aca12f4`:
+- cargo test 8/8
+- debug build OK
+- tauri dev — окно открывается
+- rustc 1.99.1 / cargo 1.99.1 / node v24.21.0
+
+Лог: `docs/reports/BUILD_REPORT_2026-11-13.md`
