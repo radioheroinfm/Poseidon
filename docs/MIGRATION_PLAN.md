@@ -31,7 +31,7 @@
 - [x] `tauri dev` → окно открылось (2026-11-13)
 
 ### Шаг 1 — CI как судья
-- [ ] GitHub Actions: workflow template в docs/ci/ — **не включён** в `.github/workflows/` (нужен PAT workflow или ручной copy)
+- [x] GitHub Actions: `.github/workflows/ci.yml` включён (3ef9258) — run #1 in progress
 - [ ] Минимальный смоук-тест после сборки
 - [x] Зафиксировать правило: «закрыто» = зелёный CI, а не ощущение (ADR-012)
 

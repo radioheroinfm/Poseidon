@@ -441,3 +441,9 @@ cathedral release build:
 ```
 
 Смоук: System Info через `__TAURI__.core.invoke` — живой JSON из Rust.
+
+### 2026-11-13 — CI включён
+
+`.github/workflows/ci.yml` на main (`3ef9258`).
+Run #1: https://github.com/radioheroinfm/Poseidon/actions/runs/43351623971 (in_progress).
+Матрица: ubuntu-latest, macos-latest, windows-latest.
