@@ -79,7 +79,7 @@
   </style>
 </head>
 <body>
-  <div class="badge">POSEIDON DESKTOP • EPOCH 2</div>
+  <div class="badge">POSEIDON DESKTOP • EPOCH 3</div>
   <h1>🔱 Poseidon</h1>
   <div class="status" id="status">Connecting to Tauri…</div>
   <div class="muted">Frameless · Gateway ownership · live invoke</div>
@@ -169,7 +169,7 @@
       call('get_system_info').then((info) => {
         if (info?.platform) {
           statusEl.textContent =
-            'Live · ' + info.platform + '/' + info.arch + ' · Poseidon ' + info.version;
+            'hermesDesktop P0 · ' + info.platform + '/' + info.arch + ' · v' + info.version;
         }
       });
     }
