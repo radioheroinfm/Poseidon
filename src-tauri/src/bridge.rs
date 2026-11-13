@@ -115,6 +115,7 @@ pub async fn show_open_dialog<R: Runtime>(
 
     // Read flags before moving fields out of options
     let is_dir = options.as_ref().and_then(|o| o.directory).unwrap_or(false);
+    let multiple = options.as_ref().and_then(|o| o.multiple).unwrap_or(false);
 
     if let Some(opts) = options {
         if let Some(title) = opts.title {
@@ -128,6 +129,11 @@ pub async fn show_open_dialog<R: Runtime>(
     if is_dir {
         let result = builder.blocking_pick_folder();
         Ok(result.map(|path: FilePath| vec![path.to_string()]))
+    } else if multiple {
+        let result = builder.blocking_pick_files();
+        Ok(result.map(|paths| {
+            paths.into_iter().map(|p: FilePath| p.to_string()).collect()
+        }))
     } else {
         let result = builder.blocking_pick_file();
         Ok(result.map(|path: FilePath| vec![path.to_string()]))

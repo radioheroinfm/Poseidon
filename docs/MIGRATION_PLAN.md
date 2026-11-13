@@ -27,7 +27,8 @@
 - [x] **B1** `src-tauri/src/main.rs` на месте
 - [x] **B2** Иконки: минимальный валидный набор + корректные пути
 - [x] **B3** `LICENSE` + `package.json` + `tsconfig.json` (Cargo.lock появится после первой сборки)
-- [ ] Добиться `cargo tauri dev` → открывается окно
+- [x] Первая debug-сборка на Linux (deb/rpm/AppImage) — 2026-11-12
+- [ ] `tauri dev` → окно реально открывается + smoke bridge
 
 ### Шаг 1 — CI как судья
 - [x] GitHub Actions: сборка на Linux / macOS / Windows (workflow добавлен)
