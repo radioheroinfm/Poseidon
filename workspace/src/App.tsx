@@ -43,7 +43,7 @@ import ComicReader from './components/ComicReader';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator' | 'comic'>('audit');
-  const [auditSubTab, setAuditSubTab] = useState<'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('epoch2');
+  const [auditSubTab, setAuditSubTab] = useState<'epoch3' | 'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('epoch3');
   const [searchQuery, setSearchQuery] = useState('');
   const [journalMessages, setJournalMessages] = useState<JournalMessage[]>(CORRESPONDENCE_LOGS);
   const [newMsgText, setNewMsgText] = useState('');
@@ -156,7 +156,7 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-400">e82cbac</strong> • Rust 🟢</span>
+              <span>Commit: <strong className="text-emerald-400">8035e77</strong> • Эпоха 3</span>
             </div>
           </div>
         </div>
@@ -320,6 +320,18 @@ export default function App() {
             {/* Sub-tab switcher */}
             <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl w-fit flex-wrap">
               <button
+                onClick={() => setAuditSubTab('epoch3')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                  auditSubTab === 'epoch3'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Отчёт №6: Закрытие Эпохи 2 & Эпоха 3 (8035e77)
+                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 text-[10px]">NEW</span>
+              </button>
+              <button
                 onClick={() => setAuditSubTab('epoch2')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                   auditSubTab === 'epoch2'
@@ -328,8 +340,7 @@ export default function App() {
                 }`}
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Отчёт №4: Эпоха 2 (Rust-фиксы приняты 🟢)
-                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-emerald-300 text-[10px]">OK</span>
+                Отчёт №4: Rust-фиксы Эпохи 2 🟢
               </button>
               <button
                 onClick={() => setAuditSubTab('kolyan')}
@@ -365,6 +376,59 @@ export default function App() {
                 Отчёт №1: Фаза 0
               </button>
             </div>
+
+            {/* SubTab Content: Epoch 2 Closure & Epoch 3 Start (#6) */}
+            {auditSubTab === 'epoch3' && (
+              <div className="space-y-4">
+                <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono uppercase font-bold">
+                          Эпоха 2 ЗАКРЫТА • 3 ОС CI GREEN 🟢
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700/60 text-cyan-300 text-[10px] font-mono font-bold">
+                          Release deb 4.07 MiB • Эпоха 3: Spike 1
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_3_START.md</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1.5">
+                        Отчёт №6 Жени: Эпоха 2 закрыта по ADR-012, ответ Коляну и 4 замечания до Spike 1
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        CI на <code className="text-cyan-300">ubuntu / macos / windows</code> зелёный (runs #1–#2), R1 и SIGKILL группы закрыты, в Эпохе 3 принят <code className="text-cyan-300">ADR-014</code> (nested <code className="text-cyan-300">window.hermesDesktop</code>).
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
+                    <div className="p-4 rounded-xl bg-emerald-950/15 border border-emerald-800/60">
+                      <span className="text-xs font-mono font-bold text-emerald-400 block mb-2">
+                        ✅ Факты закрытия Эпохи 2 + старт Эпохи 3
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>CI 3 ОС:</strong> <code className="text-cyan-300 font-mono">.github/workflows/ci.yml</code> зелёный (<code className="text-cyan-300 font-mono">tsc --noEmit</code>, 8/8 <code className="text-cyan-300 font-mono">cargo test</code>, <code className="text-cyan-300 font-mono">tauri build</code>).</li>
+                        <li><strong>Release-размер:</strong> Linux <code className="text-emerald-300 font-mono">.deb 4.07 MiB</code> / <code className="text-emerald-300 font-mono">.rpm 4.08 MiB</code> (в 13 раз меньше debug!).</li>
+                        <li><strong>R1 & R5 закрыты:</strong> владение пишется ДО ожидания READY, <code className="text-cyan-300 font-mono">SIGKILL</code> бьёт по группе <code className="text-cyan-300 font-mono">-pid</code>, живой JSON в окне подтверждён.</li>
+                        <li><strong>Эпоха 3:</strong> черновик <code className="text-cyan-300 font-mono">PRELOAD_MAP.md</code> (166 ключей), <code className="text-cyan-300 font-mono">get_gateway_ws_url</code> и <code className="text-cyan-300 font-mono">gateway_ensure</code>.</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-amber-950/15 border border-amber-800/60">
+                      <span className="text-xs font-mono font-bold text-amber-400 block mb-2">
+                        🟠 4 замечания Жени до Spike 1 (и хвосты Эпохи 2)
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>Дубль моста:</strong> <code className="text-cyan-300 font-mono">install-hermes-desktop.ts</code> и <code className="text-cyan-300 font-mono">&lt;script&gt;</code> в <code className="text-cyan-300 font-mono">index.html</code> дублируют <code className="text-cyan-300 font-mono">hermesDesktop</code> (TS-модуль пока не подключён).</li>
+                        <li><strong>Гипотеза WS URL & R3:</strong> <code className="text-cyan-300 font-mono">get_gateway_ws_url</code> не сверен с путём/токеном в <code className="text-cyan-300 font-mono">hermes-agent</code>, а attach ищет только порт 8642.</li>
+                        <li><strong>Слепой stderr & stop():</strong> <code className="text-cyan-300 font-mono">stderr</code> всё ещё в <code className="text-cyan-300 font-mono">Stdio::null()</code>, в <code className="text-cyan-300 font-mono">stop()</code> остался <code className="text-cyan-300 font-mono">port: Some(port_now)</code>, а <code className="text-cyan-300 font-mono">find_hermes_binary</code> не знает путей Windows.</li>
+                        <li><strong>Хвосты Эпохи 2:</strong> закоммитить <code className="text-cyan-300 font-mono">Cargo.lock</code>/<code className="text-cyan-300 font-mono">package-lock.json</code>, добавить <code className="text-cyan-300 font-mono">clippy</code>, заменить 8-байтный <code className="text-cyan-300 font-mono">icon.icns</code>, снять Electron baseline и написать в Nous Research.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* SubTab Content: Zhenya Epoch 2 Audit (#4 accepted) */}
             {auditSubTab === 'epoch2' && (
@@ -660,7 +724,7 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {['all', '#аудит', '#эпоха_2', '#красота', '#блокер', '#закон_11', '#план_грише', '#стратегия', '#юмор'].map(tag => (
+                  {['all', '#аудит', '#эпоха_3', '#эпоха_2', '#честность', '#красота', '#блокер', '#закон_11', '#стратегия'].map(tag => (
                     <button
                       key={tag}
                       onClick={() => setSelectedTag(tag)}
@@ -981,7 +1045,7 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit e82cbac • Rust 🟢</span>
+            <span className="text-cyan-400">Commit 8035e77 • Эпоха 3</span>
           </div>
           <div className="text-slate-400">
             «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»

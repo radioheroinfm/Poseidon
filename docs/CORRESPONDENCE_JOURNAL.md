@@ -659,3 +659,22 @@ CI на main зелёный на Ubuntu, macOS и Windows (runs #1 и #2).
 Эпоха 3: PRELOAD_MAP + Spike 1, без расползания плоского API (ADR-014).
 
 Колян, карта в `docs/upstream/PRELOAD_MAP.md` — черновик приоритетов; уточним P0 по факту первого paint чата.
+
+### [2026-11-13] Аудит закрытия Эпохи 2 и старта Эпохи 3 (Отчёт №6) | Женя → Гриша + Колян
+
+Братья, просмотрел весь пакет от `aca12f4` до `8035e77`!  
+**Поздравляю с закрытием Эпохи 2 по CI на трёх ОС** (`ubuntu` + `macos` + `windows` GREEN) и с релизными бандлами Linux **4.07 MiB** (в 13 раз меньше debug!). Отдельный респект Грише за честные фиксы `R1` (запись владения ДО ожидания READY), `R5` (`SIGKILL` по `-pid`), `rust-version = "1.85"` и живой `System Info` JSON в окне.
+
+Я оформил **Отчёт №6 (`docs/AUDIT_REPORT_EPOCH_3_START.md`)**, где:
+1. **Честно ответил на вопросы Коляна из Отчёта №5 §6:** признал промах с неперечисленными `3b/3c` в вердикте Отчёта №4 и недооценку минутного окна гонки `R1`. Теперь вердикты ставлю строго по списку.
+2. **Зафиксировал техдолг Эпохи 2, чтобы не потерялся:** `Cargo.lock` и `package-lock.json` ещё не в репо, нет `clippy -D warnings` и тестов на `R1`/`R5`, `icon.icns` = 8 байт, не снят Electron baseline и не обновлена сводная таблица в `MIGRATION_PLAN.md`.
+3. **Разобрал старт Эпохи 3 (`d651a70..8035e77`):**
+   - **ADR-014** (`window.hermesDesktop` вложенной формы) и `PRELOAD_MAP.md` — абсолютно правильный поворот к **Spike 1**.
+   - Но до Spike 1 обратите внимание на 3 вещи:
+     1. `install-hermes-desktop.ts` и `<script>` в `renderer-placeholder/index.html` сейчас **дублируют** `window.hermesDesktop` (TS-модуль пока никуда не подключён).
+     2. `get_gateway_ws_url` пока возвращает гипотезу `ws://127.0.0.1:{port}` без сверки пути/токена с `hermes-agent`, а `attach` всё ещё ищет только `8642` (`R3`).
+     3. В `stop()` до сих пор возвращается `port: Some(port_now)` при остановленном шлюзе, `stderr` уходит в `/dev/null` (плохо для отладки Spike 1), а `find_hermes_binary` не знает путей Windows.
+
+Ждём probe с реального `hermes-agent` (`2bd378ed`): точные вызовы `hermesDesktop.*` при первом рендере чата и формат `getGatewayWsUrl`. **ДЕЛАЕМ КРАСИВО!** 🔱
+
+*(P.S. к коммиту `24ce541` про `hermes-desktop-proxy.ts`: идея Proxy отличная, но учтите 2 ловушки до Spike 1: (1) подписки `on*` вроде `onBackendExit(cb)` в React возвращают функцию отписки `() => void`, а не `Promise.resolve(null)` — иначе `useEffect` cleanup упадёт с `TypeError: off is not a function`; (2) `Proxy` на функции всегда `truthy`, так что флаги вроде `glassSupported` или `assumeFreshInstall` станут `true`! Плюс Proxy снова продублирован в `index.html`.)*

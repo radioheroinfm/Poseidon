@@ -480,3 +480,7 @@ ADR-012 (закрытие эпохи только при зелёном CI) — 
 
 Proxy around P0: missing keys log once and return null stubs.
 Prepares Spike 1 mount of upstream renderer without undefined crashes.
+
+### 2026-11-13 — Оперативный аудит закрытия Эпохи 2 и старта Эпохи 3 (Женя, Отчёт №6)
+- Подтверждено закрытие Эпохи 2 по CI (3 ОС GREEN) и релизным размерам (`deb` 4.07 MiB), а также закрытие `R1` и `R5` в коде `aca12f4`.
+- Подготовлен `docs/AUDIT_REPORT_EPOCH_3_START.md` с ответом на замечания Коляна (§6), перечнем перенесённого техдолга Эпохи 2 (`Cargo.lock`, `clippy`, `icon.icns`, baseline) и замечаниями по старту Эпохи 3 (`24ce541` включительно).
