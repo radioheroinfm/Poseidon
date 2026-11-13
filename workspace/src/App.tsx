@@ -42,8 +42,8 @@ import {
 import ComicReader from './components/ComicReader';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator' | 'comic'>('comic');
-  const [auditSubTab, setAuditSubTab] = useState<'kolyan' | 'epoch1' | 'phase0'>('kolyan');
+  const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator' | 'comic'>('audit');
+  const [auditSubTab, setAuditSubTab] = useState<'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('epoch2');
   const [searchQuery, setSearchQuery] = useState('');
   const [journalMessages, setJournalMessages] = useState<JournalMessage[]>(CORRESPONDENCE_LOGS);
   const [newMsgText, setNewMsgText] = useState('');
@@ -156,7 +156,7 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-400">f89021d</strong> (synced)</span>
+              <span>Commit: <strong className="text-emerald-400">7fbc8f3</strong> + Аудит №4</span>
             </div>
           </div>
         </div>
@@ -320,6 +320,18 @@ export default function App() {
             {/* Sub-tab switcher */}
             <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl w-fit flex-wrap">
               <button
+                onClick={() => setAuditSubTab('epoch2')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                  auditSubTab === 'epoch2'
+                    ? 'bg-red-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Bug className="w-3.5 h-3.5" />
+                Отчёт №4: Аудит Эпохи 2 (Женя — 3 крит. бага)
+                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-red-300 text-[10px]">NEW</span>
+              </button>
+              <button
                 onClick={() => setAuditSubTab('kolyan')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                   auditSubTab === 'kolyan'
@@ -328,8 +340,7 @@ export default function App() {
                 }`}
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
-                Отчёт №3: Стратегический вердикт Коляна (5 блокеров)
-                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-amber-300 text-[10px]">NEW</span>
+                Отчёт №3: Стратегический вердикт Коляна
               </button>
               <button
                 onClick={() => setAuditSubTab('epoch1')}
@@ -340,7 +351,7 @@ export default function App() {
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Отчёт №2: Оперативный аудит Жени (Deadlock & CSP)
+                Отчёт №2: Аудит Эпохи 1 (Deadlock & CSP)
               </button>
               <button
                 onClick={() => setAuditSubTab('phase0')}
@@ -351,9 +362,97 @@ export default function App() {
                 }`}
               >
                 <FileCheck2 className="w-3.5 h-3.5" />
-                Отчёт №1: Фаза 0 (Архитектурный фундамент)
+                Отчёт №1: Фаза 0
               </button>
             </div>
+
+            {/* SubTab Content: Zhenya Epoch 2 Audit (#4) */}
+            {auditSubTab === 'epoch2' && (
+              <div className="space-y-4">
+                <div className="bg-[#08111e] border border-red-900/60 rounded-2xl p-5 shadow-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-red-950 border border-red-700/60 text-red-300 text-[10px] font-mono uppercase font-bold">
+                          Оперативный аудит Жени • Отчёт №4
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono font-bold">
+                          Linux Debug Build 🟢
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_2.md</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1.5">
+                        Срез 7fbc8f3: Первая сборка есть, но найдены 3 критических бага в рантайме и падающий тест
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        B1–B5 закрыты, <code className="text-cyan-300">tsc --noEmit</code> на bridge чистый (0 ошибок), deb/rpm 53.89 MiB собраны. Но <code className="text-red-300">cargo test</code> сейчас упадёт!
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 3 Critical Bugs */}
+                  <div className="grid grid-cols-1 gap-3.5 mt-4">
+                    <div className="p-4 rounded-xl bg-red-950/15 border border-red-800/60">
+                      <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                        <span className="text-xs font-mono font-bold text-red-400">
+                          🔴 Крит. баг №1: Сломанный юнит-тест в bridge.rs (доказывает, что cargo test не гоняли)
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-950 text-red-300 border border-red-800/60 font-bold">
+                          ПАДАЕТ CARGO TEST
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        <code className="text-cyan-300 font-mono">validate_open_path</code> проверяет только <code className="text-cyan-300 font-mono">contains("://")</code>. Но строка <code className="text-amber-300 font-mono">"javascript:foo"</code> не содержит <code className="text-cyan-300 font-mono">"://"</code> — функция возвращает <code className="text-emerald-300 font-mono">Ok(())</code>, и собственный тест Гриши <code className="text-red-300 font-mono">open_path_rejects_empty_and_schemes</code> падает!
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-red-950/15 border border-red-800/60">
+                      <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                        <span className="text-xs font-mono font-bold text-red-400">
+                          🔴 Крит. баг №2: Тройная бомба в GatewayManager::start() — SIGPIPE, зависание lines() и Mutex на 60с
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-950 text-red-300 border border-red-800/60 font-bold">
+                          УБЬЁТ PYTHON / ПОВЕСИТ UI
+                        </span>
+                      </div>
+                      <ul className="text-xs text-slate-300 space-y-1 list-disc pl-4">
+                        <li>После нахождения <code className="text-cyan-300 font-mono">HERMES_BACKEND_READY</code> локальный <code className="text-cyan-300 font-mono">BufReader(stdout)</code> дропается и <strong>закрывает read-конец pipe</strong> → на следующем же <code className="text-amber-300 font-mono">print()</code> Python ловит <code className="text-red-300 font-mono">BrokenPipeError / SIGPIPE</code> и умирает!</li>
+                        <li>Цикл <code className="text-cyan-300 font-mono">for line in reader.lines()</code> проверяет таймаут 60с только после прихода <code className="text-cyan-300 font-mono">\n</code>, а <code className="text-amber-300 font-mono">PYTHONUNBUFFERED=1</code> не выставлен → зависнет навечно при буферизации/тишине.</li>
+                        <li><code className="text-cyan-300 font-mono">gateway_start</code> держит <code className="text-cyan-300 font-mono">Mutex&lt;GatewayManager&gt;</code> на все 60 секунд → замораживает <code className="text-cyan-300 font-mono">gateway_status</code>, <code className="text-cyan-300 font-mono">gateway_stop</code> и закрытие окна (<code className="text-cyan-300 font-mono">RunEvent::Exit</code>).</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-red-950/15 border border-red-800/60">
+                      <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                        <span className="text-xs font-mono font-bold text-red-400">
+                          🔴 Крит. баг №3: Залипание owned_by_us = true в GatewayManager::status()
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-950 text-red-300 border border-red-800/60 font-bold">
+                          ЛОЖНОЕ СОСТОЯНИЕ
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        Если наш <code className="text-cyan-300 font-mono">hermes</code> умер сам, <code className="text-cyan-300 font-mono">status()</code> сбрасывает <code className="text-cyan-300 font-mono">*child_guard = None</code>, но забывает сбросить <code className="text-red-300 font-mono">*owned_guard = false</code>. Также <code className="text-cyan-300 font-mono">stop()</code> при fallback <code className="text-cyan-300 font-mono">child.kill()</code> бьёт SIGKILL только в главный PID, а не во всю process group <code className="text-cyan-300 font-mono">-pid</code>.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 4 Medium/High Observations */}
+                  <div className="mt-4 p-4 rounded-xl bg-amber-950/15 border border-amber-900/50">
+                    <h4 className="text-xs font-mono font-bold text-amber-400 uppercase mb-2 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      Ещё 4 важные нестыковки до смоука и CI:
+                    </h4>
+                    <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                      <li><strong>Мёртвый bridge в сборке:</strong> <code className="text-cyan-300 font-mono">renderer-placeholder/index.html</code> до сих пор ищет <code className="text-cyan-300 font-mono">electronAPI</code>, не подключает <code className="text-cyan-300 font-mono">desktop-bridge</code>, а <code className="text-cyan-300 font-mono">window.hermesDesktop</code> отдан в плоском виде вместо <code className="text-cyan-300 font-mono">windowControls.*</code>.</li>
+                      <li><strong>Диалоги:</strong> в Rust <code className="text-cyan-300 font-mono">OpenDialogOptions / SaveDialogOptions</code> полностью потеряно поле <code className="text-cyan-300 font-mono">filters</code>, а <code className="text-cyan-300 font-mono">show_save_dialog</code> передаёт путь целиком в <code className="text-cyan-300 font-mono">set_file_name</code>.</li>
+                      <li><strong>Безопасность и macOS:</strong> лишний <code className="text-cyan-300 font-mono">shell:allow-open</code> при использовании крейта <code className="text-cyan-300 font-mono">open</code> + пустой 8-байтный <code className="text-cyan-300 font-mono">icon.icns</code> (опасно для macOS-бандла).</li>
+                      <li><strong>Слепой CI-шаблон:</strong> в <code className="text-cyan-300 font-mono">docs/ci/github-actions-ci.yml</code> нет <code className="text-cyan-300 font-mono">cargo test</code> и <code className="text-cyan-300 font-mono">tsc --noEmit</code>; в <code className="text-cyan-300 font-mono">Cargo.toml</code> всё ещё стоит <code className="text-cyan-300 font-mono">rust-version = "1.75"</code> (против <code className="text-cyan-300 font-mono">edition2024</code>), а в <code className="text-cyan-300 font-mono">METRICS.md</code> проверьте версию <code className="text-cyan-300 font-mono">rustc 1.99.1</code>.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* SubTab Content: Kolyan's Strategic Audit */}
             {auditSubTab === 'kolyan' && (
@@ -596,7 +695,7 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {['all', '#красота', '#блокер', '#закон_11', '#план_грише', '#стратегия', '#юмор'].map(tag => (
+                  {['all', '#аудит', '#эпоха_2', '#красота', '#блокер', '#закон_11', '#план_грише', '#стратегия', '#юмор'].map(tag => (
                     <button
                       key={tag}
                       onClick={() => setSelectedTag(tag)}
@@ -917,7 +1016,7 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit f89021d</span>
+            <span className="text-cyan-400">Commit 7fbc8f3 + Аудит №4</span>
           </div>
           <div className="text-slate-400">
             «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»

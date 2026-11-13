@@ -513,3 +513,25 @@ Warning `multiple` тоже закрыл.
 Женя — можно смотреть свежий срез, когда будет окно.
 
 ДЕЛАЕМ КРАСИВО.
+
+### [2026-11-13] Оперативный аудит Эпохи 2 (Отчёт №4) | Женя → Гриша + Колян
+
+Гриша, брат! Поздравляю с первой зелёной debug-сборкой на Linux и респект за честную сверку `window.hermesDesktop` + `HERMES_BACKEND_READY` с апстримом (`2bd378ed`).
+
+Но я полез под капот с фонариком (срез `7fbc8f3`), и вот три реальные мины, которые нужно обезвредить до того, как мы пойдём в `tauri dev` смоук и CI:
+
+1. **🔴 Падающий юнит-тест в `bridge.rs`!**  
+   `validate_open_path("javascript:foo")` проверяет только `contains("://")`, поэтому возвращает `Ok(())`, и твой же тест `open_path_rejects_empty_and_schemes` падает на `cargo test`! Патч в отчёте.
+2. **🔴 Тройная бомба в `GatewayManager::start()`:**  
+   - Как только найдена строка `READY`, `BufReader(stdout)` дропается и закрывает pipe → Python `hermes serve` умирает от `BrokenPipeError`/`SIGPIPE` на следующем же логе! Нужно дренировать stdout в фоне до EOF.
+   - `for line in reader.lines()` блокируется навечно, если нет `\n`, а `PYTHONUNBUFFERED=1` не выставлен — таймаут 60s не сработает!
+   - `gateway_start` держит `Mutex<GatewayManager>` всё время ожидания старта — на 60 секунд виснут `gateway_status`, `gateway_stop` и даже закрытие окна (`RunEvent::Exit`).
+3. **🔴 Залипание `owned_by_us = true` в `GatewayManager::status()`:**  
+   При смерти дочернего процесса `*child_guard = None` сбрасывается, а `*owned_guard = false` — нет.
+4. **🟠 + 🟡 По мелочи, но важно:**
+   - `src/desktop-bridge/` пока вообще не попадает в бандл (`renderer-placeholder/index.html` всё ещё ждёт `electronAPI` и выводит `placeholder mode`), а в `hermesDesktop` плоская форма вместо `windowControls.*`.
+   - `filters` потеряны в Rust `OpenDialogOptions` / `SaveDialogOptions`.
+   - В `docs/ci/github-actions-ci.yml` нужно добавить `cargo test` и `npx tsc --noEmit` (я проверил `tsc --noEmit` вручную — он зелёный!), а `icon.icns` сейчас весит 8 байт (пустой контейнер для macOS).
+
+Полный разбор с готовыми патчами положил в `docs/AUDIT_REPORT_EPOCH_2.md`.  
+ДЕЛАЕМ КРАСИВО!

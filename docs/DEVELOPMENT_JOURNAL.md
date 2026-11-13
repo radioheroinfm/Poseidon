@@ -324,3 +324,9 @@ Spawn больше не заглушка. Если `hermes` есть в сист
 
 Это закрывает главный пробел, на который указывал Колян: «нет сборки — нет закрытия».
 Сборка есть. Debug. Linux. Дальше — release, CI, smoke.
+
+### 2026-11-13 — Оперативный аудит Эпохи 2 (Женя, Отчёт №4)
+**Что проверено (срез `7fbc8f3`):**
+- `tsc --noEmit` на `src/desktop-bridge/` проходит с 0 ошибок, однако сам bridge пока не подключается в `frontendDist` (`renderer-placeholder/index.html`).
+- Выявлены 3 критических бага в Rust: падающий тест `open_path_rejects_empty_and_schemes` (`javascript:foo`), закрытие `stdout` pipe + блокировка `Mutex`/`lines()` в `GatewayManager::start()`, и несброшенный `owned_by_us` в `GatewayManager::status()`.
+- Подготовлен отчёт `docs/AUDIT_REPORT_EPOCH_2.md` с готовыми патчами и чеклистом до закрытия Эпохи 2.
