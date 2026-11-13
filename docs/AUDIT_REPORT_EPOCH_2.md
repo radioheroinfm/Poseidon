@@ -234,3 +234,24 @@
 4. **Окно `tauri dev` открылось, но смоук самого `bridge` ещё не проверен:**
    * В `src/renderer-placeholder/index.html` мост `desktop-bridge` всё ещё не подключён (при клике на кнопки страница выводит `'Bridge not installed yet'`).
    * После фикса `start()` (проверка `child.try_wait()` в Phase C на случай падения до `READY`), удаления внешнего `Mutex`, подключения `window.__TAURI__.core.invoke` (или сборки bridge) в placeholder и правки `filters` в диалогах — можно звать Коляна и крутить CI на 3 ОС!
+
+---
+
+## 6. Проверка после `bf48e6e..e82cbac` (Внешний Mutex снят)
+
+**Вердикт по Rust-каркасу (Эпоха 2):** 🟢 **ПРИНЯТО** (все 3 критических бага из Отчёта №4 и ревизии закрыты!).
+
+### Что проверено в диффе `046a22e..e82cbac`:
+1. **`Arc<GatewayManager>` + `spawn_blocking` (`lib.rs`, `bridge.rs`, `gateway.rs`):**
+   * Внешний `Mutex<GatewayManager>` полностью убран. `gateway_start` уходит в `tauri::async_runtime::spawn_blocking`, а `gateway_status`, `gateway_stop` и `RunEvent::Exit` больше не ждут 60 секунд чужого `READY`.
+   * Добавлен `start_guard: Mutex<()>` — параллельный двойной `start()` сериализуется, не мешая `status()` и `stop()`.
+   * *Микро-заметка на будущее (не блокер):* в редком окне между `spawn()` (Фаза B) и записью `child` (Фаза C), если пользователь закроет окно до прихода `READY`, `stop()` увидит `child = None` и запущенный в фоне `hermes` может остаться сиротой. Лечится передачей `Arc<Mutex<Option<Child>>>` сразу после `stdout.take()` до `recv_timeout` (в Эпохе 3 или при полировке).
+2. **`validate_open_path` (`bridge.rs`):**
+   * Корректная проверка схемы `[a-z][a-z0-9+.-]*` без `/` — обычные файлы вида `/tmp/12:30.txt` теперь проходят, `javascript:foo` и `data:...` режутся.
+3. **CI-шаблон (`docs/ci/github-actions-ci.yml`):**
+   * Убран `|| true` у `npx tsc --noEmit` — теперь и `tsc`, и `cargo test` реально валят сборку при ошибке.
+
+### Что осталось до полного закрытия Эпохи 2 (по Закону №11):
+1. **Живой смоук `bridge` в окне:** подключить в `src/renderer-placeholder/index.html` реальный `window.__TAURI__.core.invoke` (или сборку `desktop-bridge`), чтобы кнопки `System Info` и `Gateway Status` выдавали живой JSON из Rust, а не заглушку.
+2. **Хвосты по контракту и macOS:** вернуть `filters` в диалоги `bridge.rs`, убрать лишний `shell:allow-open`, заменить 8-байтный `icon.icns` через `tauri icon`.
+3. **Финальный гейт (Закон №11):** включить `.github/workflows/ci.yml`, получить зелёный CI на **Linux / macOS / Windows** и снять **release**-размер в `docs/METRICS.md`.

@@ -602,3 +602,20 @@ Warning `multiple` тоже закрыл.
 Плюс colon в пути и tsc в CI.
 
 Просьба к Толяну: `git pull && cd src-tauri && cargo test && cd .. && npm run tauri build -- --debug`
+
+### [2026-11-13] Приёмка фиксов `e82cbac` | Женя → Гриша + Колян
+
+Гриша, брат — **красавчик!** Проверил `bf48e6e` и `e82cbac`:
+✓ `Arc<GatewayManager>` + `spawn_blocking` + `start_guard` — чисто, ровно, без лишней магии;  
+✓ `/tmp/12:30.txt` больше не режется, `javascript:foo` блокируется, `cargo test` 8/8;  
+✓ `npx tsc --noEmit` в CI теперь без `|| true`.
+
+По Rust-каркасу Эпохи 2 претензий больше нет — **все три критических бага закрыты начисто**!  
+*(Мелкая заметка в Разделе 6 отчёта: если приложение закроют ровно в момент ожидания `READY` между Фазой B и Фазой C, `child` ещё не записан в `self.child` — потом можно класть `Child` в `self.child` сразу после `stdout.take()`.)*
+
+Что осталось до зелёного света для Коляна и закрытия Эпохи 2:
+1. Подключить в `src/renderer-placeholder/index.html` реальный `invoke` (чтобы кнопки в живом окне уже стучались в Rust, а не писали *placeholder mode*);
+2. Докинуть `filters` в диалоги, убрать `shell:allow-open` и нарезать непустой `icon.icns` из `assets/banner-portrait.png`;
+3. Перенести CI в `.github/workflows/ci.yml`, прогнать на **3 ОС** и снять **release**-метрики в `METRICS.md`.
+
+ДЕЛАЕМ КРАСИВО! 🔱

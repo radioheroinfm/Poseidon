@@ -156,7 +156,7 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-400">c992eaf</strong> + Ревизия</span>
+              <span>Commit: <strong className="text-emerald-400">e82cbac</strong> • Rust 🟢</span>
             </div>
           </div>
         </div>
@@ -323,13 +323,13 @@ export default function App() {
                 onClick={() => setAuditSubTab('epoch2')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                   auditSubTab === 'epoch2'
-                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    ? 'bg-emerald-500 text-slate-950 shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Bug className="w-3.5 h-3.5" />
-                Отчёт №4: Эпоха 2 (8/8 тестов + ревизия c992eaf)
-                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-amber-300 text-[10px]">NEW</span>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Отчёт №4: Эпоха 2 (Rust-фиксы приняты 🟢)
+                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-emerald-300 text-[10px]">OK</span>
               </button>
               <button
                 onClick={() => setAuditSubTab('kolyan')}
@@ -366,26 +366,26 @@ export default function App() {
               </button>
             </div>
 
-            {/* SubTab Content: Zhenya Epoch 2 Audit (#4 + re-check) */}
+            {/* SubTab Content: Zhenya Epoch 2 Audit (#4 accepted) */}
             {auditSubTab === 'epoch2' && (
               <div className="space-y-4">
-                <div className="bg-[#08111e] border border-amber-900/60 rounded-2xl p-5 shadow-xl">
+                <div className="bg-[#08111e] border border-emerald-900/60 rounded-2xl p-5 shadow-xl">
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700/60 text-cyan-300 text-[10px] font-mono uppercase font-bold">
-                          Ревизия Жени • Отчёт №4 (Раздел 5)
+                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono uppercase font-bold">
+                          Приёмка Жени • Отчёт №4 (Раздел 6)
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono font-bold">
-                          cargo test 8/8 🟢 • tauri dev окно 🟢
+                        <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700/60 text-cyan-300 text-[10px] font-mono font-bold">
+                          cargo test 8/8 🟢 • Arc + spawn_blocking 🟢
                         </span>
                         <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_2.md</span>
                       </div>
                       <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1.5">
-                        Срез c992eaf: 3 бага закрыты и подтверждены на cathedral, но найден остаточный Mutex
+                        Срез e82cbac: Rust-слой принят — все критические баги и внешний Mutex закрыты!
                       </h2>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Гриша закрыл падающий тест <code className="text-emerald-300">javascript:foo</code>, починил <code className="text-emerald-300">SIGPIPE</code> фоновым дренированием и сброс <code className="text-emerald-300">owned_by_us</code>. Однако в <code className="text-red-300">bridge.rs</code> осталась одна ловушка.
+                        Гриша оперативно убрал внешний <code className="text-cyan-300">Mutex</code>, перевёл <code className="text-cyan-300">gateway_start</code> на <code className="text-cyan-300">Arc + spawn_blocking</code>, починил <code className="text-cyan-300">":"</code> в путях и убрал <code className="text-cyan-300">|| true</code> из <code className="text-cyan-300">tsc</code> в CI.
                       </p>
                     </div>
                   </div>
@@ -394,39 +394,26 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
                     <div className="p-4 rounded-xl bg-emerald-950/15 border border-emerald-800/60">
                       <span className="text-xs font-mono font-bold text-emerald-400 block mb-2">
-                        ✅ Подтверждено закрытым (e6979aa → c992eaf)
+                        ✅ Закрыто и принято по Rust + CI (bf48e6e → e82cbac)
                       </span>
                       <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
-                        <li><code className="text-cyan-300 font-mono">cargo test 8/8</code> зелёный — <code className="text-cyan-300 font-mono">javascript:foo</code> теперь режется в <code className="text-cyan-300 font-mono">validate_open_path</code>.</li>
-                        <li>В <code className="text-cyan-300 font-mono">GatewayManager::start()</code> поставлен <code className="text-cyan-300 font-mono">PYTHONUNBUFFERED=1</code>, фоновый drainer до EOF и <code className="text-cyan-300 font-mono">mpsc::recv_timeout</code>.</li>
-                        <li>В <code className="text-cyan-300 font-mono">status()</code> сбрасывается <code className="text-cyan-300 font-mono">*owned_guard = false</code> при смерти дочернего процесса.</li>
-                        <li>Debug-сборка Linux (53.98 MiB) и открытие окна <code className="text-cyan-300 font-mono">tauri dev</code> подтверждены на <code className="text-cyan-300 font-mono">cathedral</code>.</li>
+                        <li><code className="text-cyan-300 font-mono">Arc&lt;GatewayManager&gt;</code> + <code className="text-cyan-300 font-mono">spawn_blocking</code> + <code className="text-cyan-300 font-mono">start_guard</code> — <code className="text-cyan-300 font-mono">status/stop/Exit</code> не блокируются на 60с!</li>
+                        <li><code className="text-cyan-300 font-mono">PYTHONUNBUFFERED=1</code> + фоновый drainer до EOF — Python не падает от <code className="text-cyan-300 font-mono">SIGPIPE</code>.</li>
+                        <li><code className="text-cyan-300 font-mono">validate_open_path</code> режет <code className="text-cyan-300 font-mono">javascript:foo</code> и пропускает <code className="text-cyan-300 font-mono">/tmp/12:30.txt</code> (8/8 тестов OK).</li>
+                        <li>В CI <code className="text-cyan-300 font-mono">npx tsc --noEmit</code> теперь строгий (без <code className="text-cyan-300 font-mono">|| true</code>).</li>
                       </ul>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-red-950/15 border border-red-800/60">
-                      <span className="text-xs font-mono font-bold text-red-400 block mb-2">
-                        🔴 Вскрылось при повторном разборе (нужно добить)
+                    <div className="p-4 rounded-xl bg-amber-950/15 border border-amber-800/60">
+                      <span className="text-xs font-mono font-bold text-amber-400 block mb-2">
+                        🟡 Последние 3 шага до сдачи Эпохи 2 Коляну
                       </span>
                       <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
-                        <li><strong>Внешний <code className="text-cyan-300 font-mono">Mutex&lt;GatewayManager&gt;</code> в <code className="text-cyan-300 font-mono">lib.rs/bridge.rs</code> остался!</strong> Он держит блокировку на все 60с <code className="text-cyan-300 font-mono">start()</code>, обнуляя разбиение на Фазы A/B/C: <code className="text-cyan-300 font-mono">status()</code>, <code className="text-cyan-300 font-mono">stop()</code> и <code className="text-cyan-300 font-mono">Exit</code> всё равно ждут!</li>
-                        <li><strong>Ложный блок <code className="text-cyan-300 font-mono">":"</code>:</strong> <code className="text-cyan-300 font-mono">validate_open_path</code> порежет нормальный Unix-файл вроде <code className="text-amber-300 font-mono">/tmp/log_12:30.txt</code> (примет за схему <code className="text-amber-300 font-mono">/tmp/log_12</code>).</li>
-                        <li><strong>Фейковый TS-чек в CI:</strong> <code className="text-cyan-300 font-mono">npx tsc --noEmit || true</code> в <code className="text-cyan-300 font-mono">github-actions-ci.yml</code> глотает ошибки типов.</li>
+                        <li><strong>Живой смоук кнопок:</strong> подключить в <code className="text-cyan-300 font-mono">renderer-placeholder/index.html</code> реальный <code className="text-cyan-300 font-mono">window.__TAURI__.core.invoke</code>, чтобы кнопки отдавали живой JSON вместо <em>placeholder mode</em>.</li>
+                        <li><strong>Диалоги и иконка:</strong> вернуть <code className="text-cyan-300 font-mono">filters</code> в Rust, убрать <code className="text-cyan-300 font-mono">shell:allow-open</code> и нарезать непустой <code className="text-cyan-300 font-mono">icon.icns</code> (сейчас 8 байт).</li>
+                        <li><strong>Закон №11:</strong> перенести workflow в <code className="text-cyan-300 font-mono">.github/workflows/ci.yml</code>, получить зелёный CI на 3 ОС и снять <strong>release</strong>-метрики в <code className="text-cyan-300 font-mono">METRICS.md</code>.</li>
                       </ul>
                     </div>
-                  </div>
-
-                  {/* Remaining Epoch 2 Checklist */}
-                  <div className="mt-4 p-4 rounded-xl bg-amber-950/15 border border-amber-900/50">
-                    <h4 className="text-xs font-mono font-bold text-amber-400 uppercase mb-2 flex items-center gap-1.5">
-                      <AlertTriangle className="w-4 h-4 text-amber-400" />
-                      Хвосты до финиша Эпохи 2 (и приёмки Коляна по Закону №11):
-                    </h4>
-                    <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
-                      <li><strong>Живой смоук кнопок в окне:</strong> окно <code className="text-cyan-300 font-mono">tauri dev</code> открылось, но <code className="text-cyan-300 font-mono">renderer-placeholder/index.html</code> всё ещё не подключает <code className="text-cyan-300 font-mono">desktop-bridge</code> / <code className="text-cyan-300 font-mono">__TAURI__</code> (кнопки пока пишут <em>placeholder mode</em>), а <code className="text-cyan-300 font-mono">window.hermesDesktop</code> плоский вместо <code className="text-cyan-300 font-mono">windowControls.*</code>.</li>
-                      <li><strong>Диалоги и процесс:</strong> вернуть <code className="text-cyan-300 font-mono">filters</code> в Rust, проверять <code className="text-cyan-300 font-mono">try_wait()</code> после таймаута старта и добивать всю группу <code className="text-cyan-300 font-mono">-pid</code> на Unix при <code className="text-cyan-300 font-mono">SIGKILL</code>.</li>
-                      <li><strong>CI и macOS:</strong> убрать лишний <code className="text-cyan-300 font-mono">shell:allow-open</code>, сгенерировать непустой <code className="text-cyan-300 font-mono">icon.icns</code> (сейчас 8 байт), перенести CI в <code className="text-cyan-300 font-mono">.github/workflows/ci.yml</code> и замерить <strong>release</strong>-размер в <code className="text-cyan-300 font-mono">METRICS.md</code>.</li>
-                    </ul>
                   </div>
                 </div>
               </div>
@@ -994,7 +981,7 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit c992eaf + Ревизия</span>
+            <span className="text-cyan-400">Commit e82cbac • Rust 🟢</span>
           </div>
           <div className="text-slate-400">
             «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»
