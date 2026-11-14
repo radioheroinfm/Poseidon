@@ -505,3 +505,12 @@ Prepares Spike 1 mount of upstream renderer without undefined crashes.
 - URL: `/api/ws?native_dial=unminted` (полный ticket mint через gateway.sock — следующий шаг)
 - P0: getConnection(For), getGatewayWsUrl(For), boot progress, setActiveConnectionRoute
 - Discovery: `hermes gateway ensure --json` + ~/.hermes/* , не hardcode 8642
+
+### 2026-11-14 — local ensure + session-ticket mint
+
+- `src-tauri/src/local_gateway.rs`: `hermes gateway ensure --json` + unix sock `session-ticket`
+- `get_gateway_ws_url` → minted `ws://…/api/ws?native_dial=&ticket=`
+- `gateway_ensure_json` command for debug
+- Facts: `ENSURE_AND_TICKET_2026-11-14.md`
+
+Спринт готов к ревью Жени.

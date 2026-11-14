@@ -699,3 +699,15 @@ CI на main зелёный на Ubuntu, macOS и Windows (runs #1 и #2).
 getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — следующий код.
 
 Гермесу пока достаточно; если понадобится — пример живого JSON от `hermes gateway ensure --json`.
+
+### [2026-11-14] Sprint: ensure + ticket mint | Grok → Женя
+
+Брат Женя,
+
+Спринт по фактам Гермеса:
+1. `hermes gateway ensure --json` в Rust
+2. Mint `session-ticket` через `~/.hermes/gateway.sock`
+3. `get_gateway_ws_url` отдаёт живой dial URL с ticket
+
+Можно ревьюить `local_gateway.rs` + форму URL.
+На cathedral: Ensure JSON / WS URL / Probe WS.

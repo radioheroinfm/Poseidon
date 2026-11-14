@@ -4,6 +4,8 @@
 
 mod bridge;
 mod gateway;
+#[cfg(unix)]
+mod local_gateway;
 
 use bridge::*;
 use gateway::GatewayManager;
@@ -42,6 +44,7 @@ pub fn run() {
             gateway_status,
             get_gateway_ws_url,
             gateway_ensure,
+            gateway_ensure_json,
         ])
         .setup(|_app| {
             log::info!(

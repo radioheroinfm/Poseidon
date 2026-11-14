@@ -88,6 +88,7 @@
     <button id="btn-info">System Info</button>
     <button id="btn-gateway">Gateway Status</button>
     <button id="btn-ensure">Ensure Gateway</button>
+    <button id="btn-ensure-json">Ensure JSON</button>
     <button id="btn-ws">WS URL</button>
     <button id="btn-wsprobe">Probe WS</button>
     <button id="btn-min">Minimize</button>
@@ -205,6 +206,7 @@
     document.getElementById('btn-info').onclick = () => call('get_system_info');
     document.getElementById('btn-gateway').onclick = () => call('gateway_status');
     document.getElementById('btn-ensure').onclick = () => call('gateway_ensure');
+    document.getElementById('btn-ensure-json').onclick = () => call('gateway_ensure_json');
     document.getElementById('btn-ws').onclick = () => call('get_gateway_ws_url');
     document.getElementById('btn-wsprobe').onclick = async () => {
       try {

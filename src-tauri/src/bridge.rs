@@ -310,35 +310,52 @@ mod tests {
 }
 
 
-/// Upstream-shaped result: { ok, wsUrl } | { ok: false, error }
-/// URL path: /api/ws (local may need ticket mint — Phase 3.1 partial)
+/// Upstream-shaped: { ok, wsUrl } | { ok: false, error }
+/// Local: hermes gateway ensure --json + session-ticket on gateway.sock
 #[tauri::command]
 pub async fn get_gateway_ws_url(
-    state: State<'_, Arc<GatewayManager>>,
+    _state: State<'_, Arc<GatewayManager>>,
 ) -> Result<GatewayWsUrlResult, String> {
-    let st = state.status()?;
-    if !st.port_open {
-        return Ok(GatewayWsUrlResult {
-            ok: false,
-            ws_url: None,
-            error: Some("gateway port not open".into()),
-        });
+    #[cfg(unix)]
+    {
+        match crate::local_gateway::mint_local_ws_url() {
+            Ok(ws_url) => Ok(GatewayWsUrlResult {
+                ok: true,
+                ws_url: Some(ws_url),
+                error: None,
+            }),
+            Err(e) => {
+                log::warn!("mint_local_ws_url: {}", e);
+                Ok(GatewayWsUrlResult {
+                    ok: false,
+                    ws_url: None,
+                    error: Some(e),
+                })
+            }
+        }
     }
-    let Some(port) = st.port else {
-        return Ok(GatewayWsUrlResult {
+    #[cfg(not(unix))]
+    {
+        Ok(GatewayWsUrlResult {
             ok: false,
             ws_url: None,
-            error: Some("no port announced".into()),
-        });
-    };
-    // Local desktop uses native_dial + ticket; until sock mint is ported,
-    // return unminted form that matches cached descriptor shape (facts report).
-    let ws_url = format!("ws://127.0.0.1:{}/api/ws?native_dial=unminted", port);
-    Ok(GatewayWsUrlResult {
-        ok: true,
-        ws_url: Some(ws_url),
-        error: None,
-    })
+            error: Some("local ticket mint not implemented on this OS yet".into()),
+        })
+    }
+}
+
+/// Run `hermes gateway ensure --json` and return parsed payload (debug / Spike 1).
+#[tauri::command]
+pub async fn gateway_ensure_json() -> Result<serde_json::Value, String> {
+    #[cfg(unix)]
+    {
+        let payload = crate::local_gateway::gateway_ensure_json()?;
+        serde_json::to_value(payload).map_err(|e| e.to_string())
+    }
+    #[cfg(not(unix))]
+    {
+        Err("gateway ensure --json only on unix for now".into())
+    }
 }
 
 

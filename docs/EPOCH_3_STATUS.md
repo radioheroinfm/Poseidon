@@ -12,6 +12,8 @@
 - [x] Stubs fixed: `on*` → unsubscribe fn; bool flags → false (Женя №6)
 - [x] Gateway stderr → warn! drain
 - [x] Probe WS button in placeholder
+- [x] `hermes gateway ensure --json` + session-ticket mint (unix)
+- [x] getGatewayWsUrl → real dial URL with ticket
 
 ## Spike 1 — ещё открыто
 
