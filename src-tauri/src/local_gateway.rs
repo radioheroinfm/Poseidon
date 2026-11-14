@@ -306,3 +306,104 @@ mod tests {
         assert_eq!(p.endpoint.unwrap().api_origin, "http://127.0.0.1:55057");
     }
 }
+
+/// Dial with upstream subprotocols from Rust (no browser Origin).
+/// Returns first server text frame or status string.
+pub fn probe_gateway_ws() -> Result<String, String> {
+    let full = mint_local_ws_url()?;
+    let parsed = url_parse_ticket(&full)?;
+    let (dial_url, ticket) = parsed;
+
+    use tungstenite::client::IntoClientRequest;
+    use tungstenite::http::header::{SEC_WEBSOCKET_PROTOCOL, HeaderValue};
+    use tungstenite::{connect, Message};
+
+    let mut req = dial_url
+        .as_str()
+        .into_client_request()
+        .map_err(|e| format!("ws request: {}", e))?;
+
+    // hermes-gateway-v1 + hermes-gateway-ticket.<ticket>
+    let proto = format!("hermes-gateway-v1, hermes-gateway-ticket.{}", ticket);
+    req.headers_mut().insert(
+        SEC_WEBSOCKET_PROTOCOL,
+        HeaderValue::from_str(&proto).map_err(|e| format!("protocol header: {}", e))?,
+    );
+    // Do not send Origin (tungstenite won't add browser Origin)
+
+    let (mut socket, response) = connect(req).map_err(|e| format!("ws connect: {}", e))?;
+    let status = response.status();
+    let accepted = response
+        .headers()
+        .get(SEC_WEBSOCKET_PROTOCOL)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+
+    // Read first text frame (gateway.ready expected)
+    socket
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .ok();
+
+    let mut first = None;
+    for _ in 0..5 {
+        match socket.read() {
+            Ok(Message::Text(txt)) => {
+                first = Some(txt);
+                break;
+            }
+            Ok(Message::Ping(p)) => {
+                let _ = socket.send(Message::Pong(p));
+            }
+            Ok(Message::Close(_)) => break;
+            Ok(_) => continue,
+            Err(e) => return Err(format!("ws read after {}: {}", status, e)),
+        }
+    }
+
+    let _ = socket.close(None);
+
+    Ok(format!(
+        "status={} accepted_protocol={} first={}",
+        status,
+        accepted,
+        first
+            .map(|s| {
+                if s.len() > 240 {
+                    format!("{}…", &s[..240])
+                } else {
+                    s
+                }
+            })
+            .unwrap_or_else(|| "(no text frame)".into())
+    ))
+}
+
+fn url_parse_ticket(full: &str) -> Result<(String, String), String> {
+    // Manual parse to avoid extra dep: split query
+    let url = full.to_string();
+    let ticket_key = "ticket=";
+    let idx = url
+        .find(ticket_key)
+        .ok_or_else(|| "minted url missing ticket=".to_string())?;
+    let rest = &url[idx + ticket_key.len()..];
+    let ticket = rest
+        .split('&')
+        .next()
+        .unwrap_or("")
+        .to_string();
+    if ticket.is_empty() {
+        return Err("empty ticket".into());
+    }
+    // Remove ticket from query, keep native_dial
+    let without = if url.contains(&format!("&ticket={}", ticket)) {
+        url.replace(&format!("&ticket={}", ticket), "")
+    } else if url.contains(&format!("?ticket={}", ticket)) {
+        // ticket only param unlikely
+        url.replace(&format!("?ticket={}", ticket), "?")
+    } else {
+        url.replace(&format!("ticket={}", ticket), "")
+    };
+    let without = without.replace("?&", "?").trim_end_matches('?').to_string();
+    Ok((without, ticket))
+}

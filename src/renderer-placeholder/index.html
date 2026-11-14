@@ -210,40 +210,7 @@
     document.getElementById('btn-ensure-json').onclick = () => call('gateway_ensure_json');
     document.getElementById('btn-connect').onclick = () => call('get_connection');
     document.getElementById('btn-ws').onclick = () => call('get_gateway_ws_url');
-    document.getElementById('btn-wsprobe').onclick = async () => {
-      try {
-        const r = await invoke('get_gateway_ws_url');
-        const full = (r && r.wsUrl) ? r.wsUrl : null;
-        if (!full) { log('no WS URL: ' + JSON.stringify(r)); return; }
-        // Upstream canonical-protocol.ts:
-        // - strip ticket from query (leave native_dial)
-        // - protocols: ['hermes-gateway-v1', 'hermes-gateway-ticket.' + ticket]
-        const parsed = new URL(full);
-        const ticket = parsed.searchParams.get('ticket');
-        if (!ticket) { log('minted URL missing ticket'); return; }
-        parsed.searchParams.delete('ticket');
-        const dialUrl = parsed.toString();
-        const protocols = ['hermes-gateway-v1', 'hermes-gateway-ticket.' + ticket];
-        log('canonical dial ' + dialUrl);
-        log('protocols ' + JSON.stringify(protocols.map((p,i) => i===1 ? p.slice(0,28)+'…' : p)));
-        const ws = new WebSocket(dialUrl, protocols);
-        const timer = setTimeout(() => { try { ws.close(); } catch(_){} log('WS probe timeout'); }, 5000);
-        ws.onopen = () => {
-          clearTimeout(timer);
-          log('WS OPEN protocol=' + (ws.protocol || '(none)'));
-          // first client frame optional; server should send gateway.ready
-        };
-        ws.onmessage = (ev) => {
-          const t = typeof ev.data === 'string' ? ev.data.slice(0, 180) : '[binary]';
-          log('WS msg ' + t);
-        };
-        ws.onerror = () => { log('WS error event'); };
-        ws.onclose = (ev) => {
-          clearTimeout(timer);
-          log('WS close code=' + ev.code + ' reason=' + (ev.reason || '') + ' wasClean=' + ev.wasClean);
-        };
-      } catch (e) { log('probe failed: ' + e); }
-    };
+    document.getElementById('btn-wsprobe').onclick = () => call('probe_gateway_ws');
     document.getElementById('btn-min').onclick = () => call('window_minimize');
     document.getElementById('btn-close').onclick = () => call('window_close');
 

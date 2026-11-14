@@ -52,6 +52,7 @@ pub fn run() {
             set_active_connection_route,
             get_active_connection_route,
             get_boot_progress,
+            probe_gateway_ws,
         ])
         .setup(|_app| {
             log::info!(

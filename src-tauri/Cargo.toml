@@ -24,6 +24,7 @@ env_logger = "0.11"
 open = "5"
 which = "7"
 dirs = "6"
+tungstenite = { version = "0.24", default-features = true, features = ["handshake"] }
 
 [features]
 default = ["custom-protocol"]

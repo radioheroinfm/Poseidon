@@ -506,3 +506,20 @@ pub async fn get_boot_progress(
 ) -> Result<BootProgress, String> {
     Ok(conn.get_boot())
 }
+
+/// Rust-side WS probe (canonical subprotocols, no browser Origin).
+#[tauri::command]
+pub async fn probe_gateway_ws() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(unix)]
+        {
+            crate::local_gateway::probe_gateway_ws()
+        }
+        #[cfg(not(unix))]
+        {
+            Err("probe_gateway_ws is unix-only for now".into())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
