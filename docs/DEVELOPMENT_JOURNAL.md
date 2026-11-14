@@ -543,3 +543,7 @@ Stage ready for Zhenya when CI green + cathedral smoke.
 - strip ticket from query when native_dial set
 - protocols: `hermes-gateway-v1` + `hermes-gateway-ticket.<ticket>`
 - Probe + `open-gateway-socket.ts` обновлены
+
+### 2026-11-14 — Оперативный аудит №8: connection path + WS_DIAL_WIRE + probe_gateway_ws (Женя)
+- Подтверждено закрытие блокера `TS2322` и замечаний Отчёта №7 (`6ee1ada`): `tsc --noEmit` чистый, CI #18–#22 GREEN, #24 (`95ffecb`) на macOS GREEN (Linux/Windows в процессе).
+- Подготовлен `docs/AUDIT_REPORT_EPOCH_3_WS_PROBE.md`: разобраны баги в `probe_gateway_ws` (UTF-8 slice `&s[..240]`, отсутствие socket read timeout на `TcpStream`), рассинхрон `index.html` с `install-hermes-desktop.ts`, двойной `ensure` + преждевременный минт тикета в `get_connection()`, а также архитектурный вывод про `Origin`-гейт для Spike 1.

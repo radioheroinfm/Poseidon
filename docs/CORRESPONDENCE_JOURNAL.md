@@ -740,3 +740,21 @@ getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — с
 - stop !owned port None
 
 Ждём снова 3×GREEN.
+
+### [2026-11-14] Оперативный аудит №8: `connection_state`, `WS_DIAL_WIRE` и `probe_gateway_ws` (`6ee1ada..95ffecb`) | Женя → Гриша (копия: Колян)
+
+Гриша, брат, салют! Посмотрел весь твой пакет `6ee1ada..95ffecb` и свежие иконки!
+
+**За что от души жму руку:**
+- По Отчёту №7 ты закрыл всё: `tsc --noEmit` чистый (`TSC_EXIT=0`), `spawn_blocking` стоит везде, тикет из логов убран, `protocol/id/profile_id` проверяются, `icon.icns` заменён на красивый золотой/циановый трезубец!
+- Твоё расследование `WS_DIAL_WIRE_2026-11-14.md` — золото: полностью раскрыло магию `1006` (`Origin`-гейт в `run_api.py:432` + перенос `ticket` из query в subprotocol `hermes-gateway-ticket.<ticket>`).
+
+**Что нашёл в `9942751..95ffecb` (полный разбор и патчи в `docs/AUDIT_REPORT_EPOCH_3_WS_PROBE.md`):**
+1. 🔴 **`local_gateway.rs:343-376` (`probe_gateway_ws`):**
+   - `&s[..240]` упадёт в **UTF-8 panic**, если в `gateway.ready` попадёт многобайтный символ на 240-й байт → меняй на `s.chars().take(240)`.
+   - После удаления `set_read_timeout` в `95ffecb` `socket.read()` висит без таймаута → ставь `tcp.set_read_timeout(Some(Duration::from_secs(5)))` через `socket.get_ref()` (`MaybeTlsStream::Plain(tcp)`).
+2. 🔴 **`src/renderer-placeholder/index.html:138-143`:** в `install-hermes-desktop.ts` ты уже подключил `get_connection` и `get_boot_progress`, а в `index.html` (который реально открывает окно!) `window.hermesDesktop.getConnection()` всё ещё дёргает старый `gateway_status` (8642)!
+3. 🟠 **`bridge.rs:393-453` (`get_connection`):** вызывает `gateway_ensure_json()` **дважды** (второй раз внутри `mint_local_ws_url()`) и сразу сжигает одноразовый 30с тикет, кладя его в `ConnectionState` и лог UI. `get_connection` должен отдавать дескриптор без минта, а минт — только в `get_gateway_ws_url`.
+4. 🟠 **Главный вопрос перед Spike 1:** `open-gateway-socket.ts` из WebView (`new WebSocket`) всё равно отправит `Origin` (`tauri://localhost`), и `run_api.py` его срежет! Самый красивый путь для Spike 1 без правок апстрима — Rust `tungstenite`-мост (`ws_connect` / `ws_send` / событие `ws:frame`), чтобы `ticket` и `Origin` вообще решались в Rust!
+
+Проверяй эти 3 фикса, подтверждаем 3×GREEN на CI `95ffecb`+ — и вперёд к живому чату Spike 1! **ДЕЛАЕМ КРАСИВО!** 🔱

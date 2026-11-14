@@ -43,7 +43,7 @@ import ComicReader from './components/ComicReader';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator' | 'comic'>('audit');
-  const [auditSubTab, setAuditSubTab] = useState<'audit7' | 'epoch3' | 'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('audit7');
+  const [auditSubTab, setAuditSubTab] = useState<'audit8' | 'audit7' | 'epoch3' | 'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('audit8');
   const [searchQuery, setSearchQuery] = useState('');
   const [journalMessages, setJournalMessages] = useState<JournalMessage[]>(CORRESPONDENCE_LOGS);
   const [newMsgText, setNewMsgText] = useState('');
@@ -155,8 +155,8 @@ export default function App() {
             </a>
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
-              <GitBranch className="w-3.5 h-3.5 text-red-400" />
-              <span>Commit: <strong className="text-cyan-300">ba8ed8e</strong> • CI RED (TS2322)</span>
+              <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Commit: <strong className="text-emerald-300">95ffecb</strong> • Аудит №8 (WS Probe)</span>
             </div>
           </div>
         </div>
@@ -320,6 +320,18 @@ export default function App() {
             {/* Sub-tab switcher */}
             <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl w-fit flex-wrap">
               <button
+                onClick={() => setAuditSubTab('audit8')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                  auditSubTab === 'audit8'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Wifi className="w-3.5 h-3.5" />
+                Отчёт №8: WS_DIAL_WIRE &amp; Probe (95ffecb)
+                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 text-[10px]">NEW</span>
+              </button>
+              <button
                 onClick={() => setAuditSubTab('audit7')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                   auditSubTab === 'audit7'
@@ -328,8 +340,7 @@ export default function App() {
                 }`}
               >
                 <Bug className="w-3.5 h-3.5" />
-                Отчёт №7: ensure + session-ticket (ba8ed8e)
-                <span className="px-1.5 py-0.2 rounded bg-red-950 text-red-300 text-[10px] border border-red-700/60">NEW • CI RED</span>
+                Отчёт №7: ensure + ticket (ba8ed8e)
               </button>
               <button
                 onClick={() => setAuditSubTab('epoch3')}
@@ -387,6 +398,59 @@ export default function App() {
                 Отчёт №1: Фаза 0
               </button>
             </div>
+
+            {/* SubTab Content: Audit #8 (connection_state + WS_DIAL_WIRE + probe_gateway_ws) */}
+            {auditSubTab === 'audit8' && (
+              <div className="space-y-4">
+                <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono uppercase font-bold">
+                          Отчёт №7 закрыт • tsc GREEN 🟢
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700/60 text-cyan-300 text-[10px] font-mono font-bold">
+                          WS_DIAL_WIRE + tungstenite probe + иконки 🔱
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_3_WS_PROBE.md</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1.5">
+                        Отчёт №8 Жени (6ee1ada..95ffecb): Причина 1006 вскрыта, но 2 бага и стена Origin перед Spike 1
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Гриша пофиксил <code className="text-cyan-300">TS2322</code>, <code className="text-cyan-300">spawn_blocking</code>, иконки <code className="text-cyan-300">.icns</code> и вскрыл протокол <code className="text-cyan-300">hermes-gateway-ticket</code>. Но в новом коде найдены UTF-8 panic, отсутствие read timeout, старый <code className="text-cyan-300">index.html</code> и двойной минт тикета.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
+                    <div className="p-4 rounded-xl bg-emerald-950/15 border border-emerald-800/60">
+                      <span className="text-xs font-mono font-bold text-emerald-400 block mb-2">
+                        ✅ Принято в 6ee1ada..95ffecb
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>Фиксы Отчёта №7:</strong> <code className="text-cyan-300 font-mono">tsc --noEmit</code> зелёный, <code className="text-cyan-300 font-mono">spawn_blocking</code> на всех sync-вызовах, тикет не пишется в <code className="text-cyan-300 font-mono">debug!</code>, <code className="text-cyan-300 font-mono">protocol/id/profile_id</code> проверяются.</li>
+                        <li><strong>Иконки Poseidon:</strong> <code className="text-cyan-300 font-mono">icon.icns</code> заменён с 8 байт на 92 KiB + <code className="text-cyan-300 font-mono">poseidon.desktop</code>.</li>
+                        <li><strong>Разведка WS_DIAL_WIRE:</strong> подтверждены <code className="text-cyan-300 font-mono">hermes-gateway-v1</code> + <code className="text-cyan-300 font-mono">hermes-gateway-ticket.&lt;ticket&gt;</code> и отсутствие <code className="text-cyan-300 font-mono">Origin</code> на upgrade.</li>
+                        <li><strong>Каркас:</strong> добавлены <code className="text-cyan-300 font-mono">connection_state.rs</code> и Rust <code className="text-cyan-300 font-mono">probe_gateway_ws</code>.</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-red-950/15 border border-red-800/60">
+                      <span className="text-xs font-mono font-bold text-red-400 block mb-2">
+                        🔴 Баги и блокер перед Spike 1
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>🔴 UTF-8 panic + зависание (<code className="text-cyan-300 font-mono">local_gateway.rs</code>):</strong> срез <code className="text-red-300 font-mono">&amp;s[..240]</code> паникует на кириллице/эмодзи, а после удаления <code className="text-cyan-300 font-mono">set_read_timeout</code> <code className="text-cyan-300 font-mono">socket.read()</code> висит без таймаута (<code className="text-cyan-300 font-mono">TcpStream</code>).</li>
+                        <li><strong>🔴 Рассинхрон <code className="text-cyan-300 font-mono">index.html:138-143</code>:</strong> <code className="text-cyan-300 font-mono">window.hermesDesktop.getConnection()</code> в окне всё ещё дёргает старый <code className="text-cyan-300 font-mono">gateway_status</code> (8642) вместо <code className="text-cyan-300 font-mono">get_connection</code>.</li>
+                        <li><strong>🟠 Двойной минт (<code className="text-cyan-300 font-mono">bridge.rs:406-421</code>):</strong> <code className="text-cyan-300 font-mono">get_connection</code> гоняет <code className="text-cyan-300 font-mono">ensure --json</code> дважды и сразу сжигает/светит 30с тикет.</li>
+                        <li><strong>🟠 Стена <code className="text-cyan-300 font-mono">Origin</code> в Spike 1:</strong> браузерный <code className="text-cyan-300 font-mono">WebSocket</code> в WebView не может удалить <code className="text-cyan-300 font-mono">Origin</code> → нужен Rust WS-мост (<code className="text-cyan-300 font-mono">tungstenite</code> ↔ IPC).</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* SubTab Content: Audit #7 (ensure + session-ticket) */}
             {auditSubTab === 'audit7' && (
@@ -1108,7 +1172,7 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit ba8ed8e • Эпоха 3 (Аудит №7)</span>
+            <span className="text-cyan-400">Commit 95ffecb • Эпоха 3 (Аудит №8)</span>
           </div>
           <div className="text-slate-400">
             «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»
