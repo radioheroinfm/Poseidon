@@ -570,3 +570,9 @@ Stage ready for Zhenya when CI green + cathedral smoke.
 
 Cathedral: WS Connect → gateway.ready; WS Ping → `result.ok: true`.
 Added `PoseidonGatewaySocket` (WebSocket-like over invoke/listen).
+
+### 2026-11-14 — Cathedral full cycle + mount plan
+
+Log confirms Probe/Connect/Ping/Adapter/Close all green.
+UI strategy: reuse Hermes apps/desktop (SPIKE1_MOUNT.md), inject PoseidonGatewaySocket.
+Log path: walk up to project root for logs/poseidon-ui.log.

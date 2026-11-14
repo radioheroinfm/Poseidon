@@ -34,3 +34,6 @@ ws.close();
 ```
 
 Cathedral: Connect/Ping confirmed; Adapter Ping exercises the same path.
+
+
+See **SPIKE1_MOUNT.md** for mounting `apps/desktop` without reinventing UI.

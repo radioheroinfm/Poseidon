@@ -561,11 +561,20 @@ pub async fn gateway_ws_status(
 // ---------------------------------------------------------------------------
 
 fn ui_log_path() -> std::path::PathBuf {
-    // Prefer Poseidon project logs/ next to cwd; fallback ~/.poseidon/logs
+    // 1) POSEIDON_ROOT  2) walk up for package.json+src-tauri  3) ~/.poseidon/logs
+    if let Ok(root) = std::env::var("POSEIDON_ROOT") {
+        let p = std::path::PathBuf::from(root).join("logs");
+        return p.join("poseidon-ui.log");
+    }
     let cwd = std::env::current_dir().unwrap_or_default();
-    let project = cwd.join("logs");
-    if project.exists() || cwd.join("src-tauri").exists() || cwd.join("package.json").exists() {
-        return project.join("poseidon-ui.log");
+    let mut dir = cwd.clone();
+    for _ in 0..6 {
+        if dir.join("package.json").exists() && dir.join("src-tauri").exists() {
+            return dir.join("logs").join("poseidon-ui.log");
+        }
+        if !dir.pop() {
+            break;
+        }
     }
     dirs::home_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
