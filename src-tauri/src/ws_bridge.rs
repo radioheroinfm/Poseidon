@@ -99,6 +99,7 @@ impl WsBridge {
                 .unwrap_or("")
                 .to_string();
             info!("ws_bridge connected protocol={}", accepted);
+            let accepted_for_status = accepted.clone();
 
             let (tx, rx) = std::sync::mpsc::channel::<Outbound>();
             {
@@ -112,7 +113,7 @@ impl WsBridge {
                     "gateway-ws-status",
                     WsStatus {
                         connected: true,
-                        message: Some(format!("connected {}", accepted)),
+                        message: Some(format!("connected {}", accepted_for_status)),
                     },
                 );
                 loop {
