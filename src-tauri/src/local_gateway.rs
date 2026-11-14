@@ -340,11 +340,7 @@ pub fn probe_gateway_ws() -> Result<String, String> {
         .unwrap_or("")
         .to_string();
 
-    // Read first text frame (gateway.ready expected)
-    socket
-        .set_read_timeout(Some(Duration::from_secs(5)))
-        .ok();
-
+    // Read first text frame (gateway.ready expected). No set_read_timeout on tungstenite 0.24.
     let mut first = None;
     for _ in 0..5 {
         match socket.read() {
@@ -355,7 +351,9 @@ pub fn probe_gateway_ws() -> Result<String, String> {
             Ok(Message::Ping(p)) => {
                 let _ = socket.send(Message::Pong(p));
             }
-            Ok(Message::Close(_)) => break;
+            Ok(Message::Close(_)) => {
+                break;
+            }
             Ok(_) => continue,
             Err(e) => return Err(format!("ws read after {}: {}", status, e)),
         }
