@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Poseidon
+GenericName=Hermes Desktop (Tauri)
+Comment=Poseidon — Hermes Agent shell on Tauri
+Exec=poseidon-desktop
+Icon=poseidon-desktop
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=true
+StartupWMClass=poseidon-desktop
