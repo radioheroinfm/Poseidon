@@ -214,13 +214,37 @@
       try {
         const r = await invoke('get_gateway_ws_url');
         const url = (r && r.wsUrl) ? r.wsUrl : (typeof r === 'string' ? r : null);
-        if (!url) { log('no WS URL — Ensure Gateway first: ' + JSON.stringify(r)); return; }
-        log('probing ' + url + ' ...');
-        const ws = new WebSocket(url);
-        const timer = setTimeout(() => { try { ws.close(); } catch(_){} log('WS probe timeout'); }, 4000);
-        ws.onopen = () => { clearTimeout(timer); log('WS OPEN ' + url); ws.close(); };
-        ws.onerror = (e) => { clearTimeout(timer); log('WS error (may need auth/protocol) — socket reached network layer'); };
-        ws.onclose = (ev) => { clearTimeout(timer); log('WS close code=' + ev.code + ' reason=' + (ev.reason||'')); };
+        if (!url) { log('no WS URL — Get Connection first: ' + JSON.stringify(r)); return; }
+        // Upstream: ticket may ride in Sec-WebSocket-Protocol when native_dial is present
+        let ticket = null;
+        try { ticket = new URL(url).searchParams.get('ticket'); } catch (_) {}
+        const attempts = [];
+        attempts.push({ label: 'query-only', url, protocols: undefined });
+        if (ticket) {
+          const u = new URL(url);
+          u.searchParams.delete('ticket');
+          const base = u.toString();
+          attempts.push({ label: 'subproto=ticket', url: base, protocols: [ticket] });
+          attempts.push({ label: 'subproto=base64.ticket', url: base, protocols: ['base64.ticket.' + btoa(ticket).replace(/=+$/,'')] });
+          attempts.push({ label: 'query+subproto', url, protocols: [ticket] });
+        }
+        log('probing ' + attempts.length + ' wire modes (ticket TTL ~30s)...');
+        for (const a of attempts) {
+          const result = await new Promise((resolve) => {
+            let settled = false;
+            const done = (msg) => { if (!settled) { settled = true; resolve(msg); } };
+            let ws;
+            try {
+              ws = a.protocols ? new WebSocket(a.url, a.protocols) : new WebSocket(a.url);
+            } catch (e) { done(a.label + ': construct error ' + e); return; }
+            const timer = setTimeout(() => { try { ws.close(); } catch(_){} done(a.label + ': timeout'); }, 3000);
+            ws.onopen = () => { clearTimeout(timer); done(a.label + ': OPEN'); try { ws.close(); } catch(_){} };
+            ws.onerror = () => { /* wait for close */ };
+            ws.onclose = (ev) => { clearTimeout(timer); done(a.label + ': close ' + ev.code + (ev.reason ? ' ' + ev.reason : '')); };
+          });
+          log(result);
+          if (result.includes(': OPEN')) break;
+        }
       } catch (e) { log('probe failed: ' + e); }
     };
     document.getElementById('btn-min').onclick = () => call('window_minimize');

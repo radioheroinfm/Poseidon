@@ -34,3 +34,13 @@ Per-home under `~/.hermes`:
 Second `hermes serve` loses host flock → exit **75** (attach / refuse).
 
 READY stdout still: `HERMES_BACKEND_READY port=<N>` for child spawn path.
+
+## Probe note (2026-11-14)
+
+Cathedral: mint URL works; naive `new WebSocket(url)` → close **1006**.
+
+Upstream renderer (`client.ts`): when URL has `native_dial`, wire is **canonical** and **ticket may go in WebSocket subprotocol**, not only query.
+
+Also: each mint burns a one-use ticket (TTL 30s). Don't mint twice before dial.
+
+Poseidon Probe WS tries: query-only, subproto=ticket, subproto=base64.ticket.*, query+subproto.

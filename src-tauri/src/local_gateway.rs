@@ -265,12 +265,25 @@ fn url_encode(s: &str) -> String {
 }
 
 fn uuid_v4_simple() -> String {
+    // RFC-ish UUID from random-ish bits (not crypto; fine for dial nonce)
     use std::time::{SystemTime, UNIX_EPOCH};
-    let t = SystemTime::now()
+    let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    format!("{:032x}", t ^ (t >> 17))
+    let a = (nanos & 0xffff_ffff) as u32;
+    let b = ((nanos >> 32) & 0xffff) as u16;
+    let c = (0x4000 | (((nanos >> 48) as u16) & 0x0fff)) as u16; // version 4
+    let d = (0x8000 | (((nanos >> 60) as u16) & 0x3fff)) as u16; // variant
+    let e = (nanos >> 16) as u64;
+    format!(
+        "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
+        a,
+        b,
+        c,
+        d,
+        e & 0xffff_ffff_ffff
+    )
 }
 
 #[cfg(test)]
