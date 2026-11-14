@@ -43,7 +43,7 @@ import ComicReader from './components/ComicReader';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator' | 'comic'>('audit');
-  const [auditSubTab, setAuditSubTab] = useState<'epoch3' | 'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('epoch3');
+  const [auditSubTab, setAuditSubTab] = useState<'audit7' | 'epoch3' | 'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('audit7');
   const [searchQuery, setSearchQuery] = useState('');
   const [journalMessages, setJournalMessages] = useState<JournalMessage[]>(CORRESPONDENCE_LOGS);
   const [newMsgText, setNewMsgText] = useState('');
@@ -155,8 +155,8 @@ export default function App() {
             </a>
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
-              <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-400">8035e77</strong> • Эпоха 3</span>
+              <GitBranch className="w-3.5 h-3.5 text-red-400" />
+              <span>Commit: <strong className="text-cyan-300">ba8ed8e</strong> • CI RED (TS2322)</span>
             </div>
           </div>
         </div>
@@ -320,6 +320,18 @@ export default function App() {
             {/* Sub-tab switcher */}
             <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl w-fit flex-wrap">
               <button
+                onClick={() => setAuditSubTab('audit7')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                  auditSubTab === 'audit7'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Bug className="w-3.5 h-3.5" />
+                Отчёт №7: ensure + session-ticket (ba8ed8e)
+                <span className="px-1.5 py-0.2 rounded bg-red-950 text-red-300 text-[10px] border border-red-700/60">NEW • CI RED</span>
+              </button>
+              <button
                 onClick={() => setAuditSubTab('epoch3')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                   auditSubTab === 'epoch3'
@@ -329,7 +341,6 @@ export default function App() {
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 Отчёт №6: Закрытие Эпохи 2 & Эпоха 3 (8035e77)
-                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 text-[10px]">NEW</span>
               </button>
               <button
                 onClick={() => setAuditSubTab('epoch2')}
@@ -376,6 +387,58 @@ export default function App() {
                 Отчёт №1: Фаза 0
               </button>
             </div>
+
+            {/* SubTab Content: Audit #7 (ensure + session-ticket) */}
+            {auditSubTab === 'audit7' && (
+              <div className="space-y-4">
+                <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-red-950 border border-red-700/60 text-red-300 text-[10px] font-mono uppercase font-bold">
+                          CI #11–#13 RED • tsc --noEmit TS2322 🔴
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono font-bold">
+                          local_gateway.rs + session-ticket 🟢
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_3_TICKET_WS.md</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1.5">
+                        Отчёт №7 Жени (841a039..ba8ed8e): Прорыв по session-ticket, но 1 красный блокер CI и 3 риска
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Гриша закрыл ловушки Отчёта №6, снял живой <code className="text-cyan-300">hermes gateway ensure --json</code> и реализовал <code className="text-cyan-300">gateway.sock</code> тикеты с <code className="text-cyan-300">#[cfg(unix)]</code>. Но из-за забытой сигнатуры в <code className="text-cyan-300">hermes-desktop-types.ts</code> три прогона CI подряд упали на 3 ОС.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
+                    <div className="p-4 rounded-xl bg-emerald-950/15 border border-emerald-800/60">
+                      <span className="text-xs font-mono font-bold text-emerald-400 block mb-2">
+                        ✅ Что принято с апплодисментами (841a039..ba8ed8e)
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>Фиксы Отчёта №6:</strong> <code className="text-cyan-300 font-mono">on*</code> возвращают синхронный unsubscribe <code className="text-cyan-300 font-mono">() =&gt; void</code>, <code className="text-cyan-300 font-mono">BOOLEAN_FLAGS</code> явно <code className="text-cyan-300 font-mono">false</code>, <code className="text-cyan-300 font-mono">stderr</code> дренируется в <code className="text-cyan-300 font-mono">warn!</code>.</li>
+                        <li><strong>Живые факты v0.23.0:</strong> <code className="text-cyan-300 font-mono">HERMES_FACTS_2026-11-14.md</code> + <code className="text-cyan-300 font-mono">ENSURE_AND_TICKET_2026-11-14.md</code> с реального <code className="text-cyan-300 font-mono">cathedral</code> (порт 55057).</li>
+                        <li><strong>Rust mint тикетов:</strong> <code className="text-cyan-300 font-mono">local_gateway.rs</code> под <code className="text-cyan-300 font-mono">#[cfg(unix)]</code> собирает <code className="text-cyan-300 font-mono">/api/ws?native_dial=...&amp;ticket=...</code> через <code className="text-cyan-300 font-mono">gateway.sock</code>.</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-red-950/15 border border-red-800/60">
+                      <span className="text-xs font-mono font-bold text-red-400 block mb-2">
+                        🔴 Блокеры и риски до Spike 1 (готовые патчи в отчёте)
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>🔴 Блокер CI (#11–#13 RED):</strong> в <code className="text-cyan-300 font-mono">install-hermes-desktop.ts</code> возвращается <code className="text-cyan-300 font-mono">&#123; ok, wsUrl, error &#125;</code>, а в <code className="text-cyan-300 font-mono">hermes-desktop-types.ts:33</code> остался <code className="text-cyan-300 font-mono">Promise&lt;string | null&gt;</code> → <code className="text-red-300 font-mono">TS2322</code>.</li>
+                        <li><strong>🔴 Блок async executor:</strong> <code className="text-cyan-300 font-mono">get_gateway_ws_url</code> и <code className="text-cyan-300 font-mono">gateway_ensure_json</code> в <code className="text-cyan-300 font-mono">bridge.rs</code> синхронно гоняют <code className="text-cyan-300 font-mono">Command::output()</code> и <code className="text-cyan-300 font-mono">UnixStream</code> без <code className="text-cyan-300 font-mono">spawn_blocking</code>.</li>
+                        <li><strong>🟠 Секрет и discovery:</strong> <code className="text-cyan-300 font-mono">local_gateway.rs:146</code> пишет <code className="text-cyan-300 font-mono">ticket</code> в <code className="text-cyan-300 font-mono">debug!</code>; <code className="text-cyan-300 font-mono">find_hermes_bin()</code> не знает <code className="text-cyan-300 font-mono">~/.local/bin</code>/<code className="text-cyan-300 font-mono">.venv</code>.</li>
+                        <li><strong>🟡 Протокол и раздвой:</strong> не проверяются <code className="text-cyan-300 font-mono">protocol==1</code>, <code className="text-cyan-300 font-mono">id==1</code>, <code className="text-cyan-300 font-mono">profile_id==home</code>; <code className="text-cyan-300 font-mono">getConnection()</code> всё ещё смотрит на <code className="text-cyan-300 font-mono">serve</code> вместо <code className="text-cyan-300 font-mono">ensure --json</code>.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* SubTab Content: Epoch 2 Closure & Epoch 3 Start (#6) */}
             {auditSubTab === 'epoch3' && (
@@ -1045,7 +1108,7 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit 8035e77 • Эпоха 3</span>
+            <span className="text-cyan-400">Commit ba8ed8e • Эпоха 3 (Аудит №7)</span>
           </div>
           <div className="text-slate-400">
             «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»

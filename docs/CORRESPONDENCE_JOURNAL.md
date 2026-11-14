@@ -711,3 +711,19 @@ getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — с
 
 Можно ревьюить `local_gateway.rs` + форму URL.
 На cathedral: Ensure JSON / WS URL / Probe WS.
+
+### [2026-11-14] Оперативный аудит №7: `hermes gateway ensure --json`, `session-ticket` и красный CI (`ba8ed8e`) | Женя → Гриша (копия: Колян)
+
+Гриша, брат, привет! Просмотрел весь твой свежий рывок от `841a039` до `ba8ed8e` и прогнал проверки.
+
+**За что жму руку:**
+- Три ловушки из Отчёта №6 ты закрыл мгновенно (`on*` → sync unsub, `BOOLEAN_FLAGS` → `false`, `stderr` → `warn!` drainer).
+- Снятые факты из живого `hermes-agent` (`HERMES_FACTS_2026-11-14.md` + `ENSURE_AND_TICKET_2026-11-14.md`) и рабочий `local_gateway.rs` с `#[cfg(unix)]` в `lib.rs` — это мощнейший шаг к настоящему Spike 1!
+
+**Но по Закону №2 и Закону №11 прятать не могу — нашёл 1 красный блокер CI и 3 важных косяка до Spike 1** (полный разбор и готовые патчи положил в `docs/AUDIT_REPORT_EPOCH_3_TICKET_WS.md`):
+1. 🔴 **CI КРАСНЫЙ на всех 3 ОС (`runs #11, #12, #13` FAILED на `tsc --noEmit`):** в `2ebcf31` ты поменял возвращаемое значение `getGatewayWsUrl` в `install-hermes-desktop.ts` на `{ ok, wsUrl, error }`, но забыл обновить `HermesDesktopP0` в `hermes-desktop-types.ts` (там всё ещё `Promise<string | null>`). Локально проверил: `TS2322`, все три джобы CI падают до `cargo test`!
+2. 🔴 **`bridge.rs` (`get_gateway_ws_url`, `gateway_ensure_json`):** sync `Command::output()` и `UnixStream` вызываются прямо внутри `async fn` без `tauri::async_runtime::spawn_blocking` — это блокирует executor Tauri.
+3. 🟠 **Утечка тикета в `local_gateway.rs:146`:** `debug!("ticket reply: {}", line.trim())` пишет одноразовый действующий `ticket` в лог. Плюс `local_gateway::find_hermes_bin()` ищет только через `which`, игнорируя `~/.hermes/bin`, `~/.local/bin`, `.venv/bin` (из GUI не запустится).
+4. 🟡 **Раздвой и протокол:** `mint_session_ticket` не проверяет `protocol == 1`, `id == 1` и `grant.profile_id == profile_id`, в `stop()` при `!owned_guard` остался `port: Some(port_now)`, а `getConnection()` пока ходит в старый `serve` (`8642`) вместо `ensure --json` (`55057`).
+
+Чини `hermes-desktop-types.ts` + `spawn_blocking` — вернём 3×GREEN и увидим живой WS-коннект на `cathedral`! **ДЕЛАЕМ КРАСИВО!** 🔱

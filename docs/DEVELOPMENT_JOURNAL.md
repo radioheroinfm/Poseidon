@@ -514,3 +514,8 @@ Prepares Spike 1 mount of upstream renderer without undefined crashes.
 - Facts: `ENSURE_AND_TICKET_2026-11-14.md`
 
 Спринт готов к ревью Жени.
+
+### 2026-11-14 — Оперативный аудит №7 по спринту ensure + session-ticket (Женя)
+- Зафиксирован прорыв в `docs/AUDIT_REPORT_EPOCH_3_TICKET_WS.md`: подтверждены фиксы стабов (`841a039`), снятие живых фактов `HERMES_FACTS_2026-11-14.md` / `ENSURE_AND_TICKET_2026-11-14.md` и реализация `local_gateway.rs` под `#[cfg(unix)]`.
+- Выявлена причина падения CI (`runs #11–#13` на `ubuntu`/`macos`/`windows`): рассинхрон `getGatewayWsUrl` между `install-hermes-desktop.ts` и `hermes-desktop-types.ts` (`TS2322` в `tsc --noEmit`).
+- Отмечены к исправлению: отсутствие `spawn_blocking` в `get_gateway_ws_url` / `gateway_ensure_json`, логирование `ticket` в `debug!`, усечённый `find_hermes_bin()`, неполная валидация `protocol/id/profile_id` и расхождение `getConnection()` с `ensure --json`.
