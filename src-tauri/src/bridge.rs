@@ -555,3 +555,53 @@ pub async fn gateway_ws_status(
         message: None,
     })
 }
+
+// ---------------------------------------------------------------------------
+// UI log file (so cathedral can share logs without copy-paste)
+// ---------------------------------------------------------------------------
+
+fn ui_log_path() -> std::path::PathBuf {
+    // Prefer Poseidon project logs/ next to cwd; fallback ~/.poseidon/logs
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let project = cwd.join("logs");
+    if project.exists() || cwd.join("src-tauri").exists() || cwd.join("package.json").exists() {
+        return project.join("poseidon-ui.log");
+    }
+    dirs::home_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join(".poseidon")
+        .join("logs")
+        .join("poseidon-ui.log")
+}
+
+/// Append one line to logs/poseidon-ui.log (creates parent dirs).
+#[tauri::command]
+pub async fn append_ui_log(line: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        use std::io::Write;
+        let path = ui_log_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("mkdir {:?}: {}", parent, e))?;
+        }
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let mut f = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|e| format!("open {:?}: {}", path, e))?;
+        writeln!(f, "[{}] {}", ts, line).map_err(|e| format!("write: {}", e))?;
+        Ok(path.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Return path to the UI log file (for display).
+#[tauri::command]
+pub fn get_ui_log_path() -> String {
+    ui_log_path().to_string_lossy().to_string()
+}

@@ -60,6 +60,8 @@ pub fn run() {
             gateway_ws_send,
             gateway_ws_close,
             gateway_ws_status,
+            append_ui_log,
+            get_ui_log_path,
         ])
         .setup(|_app| {
             log::info!(
