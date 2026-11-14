@@ -86,6 +86,7 @@ impl ConnectionState {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_last(&self) -> ConnectionInfo {
         self.last.lock().map(|g| g.clone()).unwrap_or_default()
     }
