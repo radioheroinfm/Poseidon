@@ -1,46 +1,21 @@
-# Gateway WebSocket — upstream facts (v0.23.0 / 2bd378ed)
+# Gateway WebSocket — upstream wire (v0.23.0)
 
-**Source:** `docs/upstream/HERMES_FACTS_2026-11-14.md` (local probe)
+**Source:** `docs/upstream/WS_DIAL_WIRE_2026-11-14.md`
 
-## getGatewayWsUrl return shape
-
-```ts
-{ ok: true, wsUrl: string } | { ok: false, error: string, needsOauthLogin?: true }
-// renderer also tolerates bare string
-```
-
-## URL assembly
+## Minted URL (from main / Poseidon Rust)
 
 ```
 ws://127.0.0.1:<port>/api/ws?native_dial=<uuid>&ticket=<one-use>
-// cached descriptor may show native_dial=unminted
-// remote token mode: ?token=
-// remote OAuth: ?ticket= (re-mint every connect)
 ```
 
-Path is always `/api/ws` (+ optional base path prefix).
+## Renderer dial (canonical)
 
-## Local auth
+1. If `native_dial` present: **delete `ticket` from query**
+2. `new WebSocket(url, ['hermes-gateway-v1', 'hermes-gateway-ticket.' + ticket])`
+3. Server accepts with subprotocol `hermes-gateway-v1`
+4. Server → client first event: `gateway.ready` (JSON-RPC)
+5. Client → server: `client.capabilities` `{desktop_local:true}`, then `gateway.ping`
 
-- **Not** a static token in URL for local spawn.
-- Ticket minted via unix socket `~/.hermes/gateway.sock` (`session-ticket` JSON protocol).
-- Desktop main: `hermes gateway ensure --json` → endpoint, then mint ticket on each connect.
+Electron main strips `Origin` / validates `native_dial` pending map — Poseidon WebView may still send Origin; if 1006 persists, next is Origin handling.
 
-## Discovery (not port 8642)
-
-Per-home under `~/.hermes`:
-- `gateway.sock`, `gateway.pid`, `gateway.lock`, `gateway_state.json`
-
-Second `hermes serve` loses host flock → exit **75** (attach / refuse).
-
-READY stdout still: `HERMES_BACKEND_READY port=<N>` for child spawn path.
-
-## Probe note (2026-11-14)
-
-Cathedral: mint URL works; naive `new WebSocket(url)` → close **1006**.
-
-Upstream renderer (`client.ts`): when URL has `native_dial`, wire is **canonical** and **ticket may go in WebSocket subprotocol**, not only query.
-
-Also: each mint burns a one-use ticket (TTL 30s). Don't mint twice before dial.
-
-Poseidon Probe WS tries: query-only, subproto=ticket, subproto=base64.ticket.*, query+subproto.
+Ticket is one-use, TTL 30s.

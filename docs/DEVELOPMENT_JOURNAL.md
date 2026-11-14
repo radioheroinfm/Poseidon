@@ -536,3 +536,10 @@ Prepares Spike 1 mount of upstream renderer without undefined crashes.
 - placeholder: Get Connection button
 
 Stage ready for Zhenya when CI green + cathedral smoke.
+
+### 2026-11-14 — Canonical WS dial wire
+
+Из отчёта Гермеса `WS_DIAL_WIRE`:
+- strip ticket from query when native_dial set
+- protocols: `hermes-gateway-v1` + `hermes-gateway-ticket.<ticket>`
+- Probe + `open-gateway-socket.ts` обновлены
