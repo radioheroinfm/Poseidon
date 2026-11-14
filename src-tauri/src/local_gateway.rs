@@ -10,7 +10,7 @@ use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
-use log::{info, warn, debug};
+use log::{info, debug};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EnsureEndpoint {
