@@ -316,46 +316,54 @@ mod tests {
 pub async fn get_gateway_ws_url(
     _state: State<'_, Arc<GatewayManager>>,
 ) -> Result<GatewayWsUrlResult, String> {
-    #[cfg(unix)]
-    {
-        match crate::local_gateway::mint_local_ws_url() {
-            Ok(ws_url) => Ok(GatewayWsUrlResult {
-                ok: true,
-                ws_url: Some(ws_url),
-                error: None,
-            }),
-            Err(e) => {
-                log::warn!("mint_local_ws_url: {}", e);
-                Ok(GatewayWsUrlResult {
-                    ok: false,
-                    ws_url: None,
-                    error: Some(e),
-                })
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(unix)]
+        {
+            match crate::local_gateway::mint_local_ws_url() {
+                Ok(ws_url) => Ok(GatewayWsUrlResult {
+                    ok: true,
+                    ws_url: Some(ws_url),
+                    error: None,
+                }),
+                Err(e) => {
+                    log::warn!("mint_local_ws_url: {}", e);
+                    Ok(GatewayWsUrlResult {
+                        ok: false,
+                        ws_url: None,
+                        error: Some(e),
+                    })
+                }
             }
         }
-    }
-    #[cfg(not(unix))]
-    {
-        Ok(GatewayWsUrlResult {
-            ok: false,
-            ws_url: None,
-            error: Some("local ticket mint not implemented on this OS yet".into()),
-        })
-    }
+        #[cfg(not(unix))]
+        {
+            Ok(GatewayWsUrlResult {
+                ok: false,
+                ws_url: None,
+                error: Some("local ticket mint not implemented on this OS yet".into()),
+            })
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Run `hermes gateway ensure --json` and return parsed payload (debug / Spike 1).
 #[tauri::command]
 pub async fn gateway_ensure_json() -> Result<serde_json::Value, String> {
-    #[cfg(unix)]
-    {
-        let payload = crate::local_gateway::gateway_ensure_json()?;
-        serde_json::to_value(payload).map_err(|e| e.to_string())
-    }
-    #[cfg(not(unix))]
-    {
-        Err("gateway ensure --json only on unix for now".into())
-    }
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(unix)]
+        {
+            let payload = crate::local_gateway::gateway_ensure_json()?;
+            serde_json::to_value(payload).map_err(|e| e.to_string())
+        }
+        #[cfg(not(unix))]
+        {
+            Err("gateway ensure --json only on unix for now".into())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 

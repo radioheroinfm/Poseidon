@@ -3,6 +3,7 @@ import type {
   GatewayStatus,
   SystemInfo,
   ConnectionDescriptor,
+  GatewayWsUrlResult,
 } from './hermes-desktop-types';
 import { withHermesStubs } from './hermes-desktop-proxy';
 
@@ -31,9 +32,12 @@ export function installHermesDesktopP0(): HermesDesktopP0 | null {
 
     getVersion: async () => String((await invoke('get_version')) ?? '0.1.0'),
 
-    getGatewayWsUrl: async () => {
-      const r = await invoke('get_gateway_ws_url') as { ok?: boolean; wsUrl?: string; error?: string } | string | null;
-      if (r && typeof r === 'object') return r;
+    getGatewayWsUrl: async (): Promise<GatewayWsUrlResult> => {
+      const r = await invoke('get_gateway_ws_url') as GatewayWsUrlResult | string | null;
+      if (r && typeof r === 'object' && 'ok' in r) {
+        if (r.ok === true && r.wsUrl) return { ok: true, wsUrl: r.wsUrl };
+        if (r.ok === false) return { ok: false, error: (r as { error?: string }).error || 'error' };
+      }
       if (typeof r === 'string') return { ok: true, wsUrl: r };
       return { ok: false, error: 'no url' };
     },

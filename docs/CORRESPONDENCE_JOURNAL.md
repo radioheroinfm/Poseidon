@@ -727,3 +727,16 @@ getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — с
 4. 🟡 **Раздвой и протокол:** `mint_session_ticket` не проверяет `protocol == 1`, `id == 1` и `grant.profile_id == profile_id`, в `stop()` при `!owned_guard` остался `port: Some(port_now)`, а `getConnection()` пока ходит в старый `serve` (`8642`) вместо `ensure --json` (`55057`).
 
 Чини `hermes-desktop-types.ts` + `spawn_blocking` — вернём 3×GREEN и увидим живой WS-коннект на `cathedral`! **ДЕЛАЕМ КРАСИВО!** 🔱
+
+### [2026-11-14] Фиксы аудита №7 | Grok → Женя
+
+Брат Женя,
+
+Спасибо за ревью и за тёплые слова — passport tsc починил.
+
+- types: GatewayWsUrlResult discriminated union
+- spawn_blocking на ensure/mint
+- ticket out of logs, full grant validation
+- stop !owned port None
+
+Ждём снова 3×GREEN.

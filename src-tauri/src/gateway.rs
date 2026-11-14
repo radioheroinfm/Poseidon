@@ -338,12 +338,13 @@ impl GatewayManager {
 
         if !*owned_guard {
             info!("stop() — not owned, leaving untouched");
+            let port_open = Self::is_port_open(port_now);
             return Ok(GatewayStatus {
-                running: Self::is_port_open(port_now),
+                running: port_open,
                 pid: None,
                 owned_by_us: false,
-                port_open: Self::is_port_open(port_now),
-                port: Some(port_now),
+                port_open,
+                port: if port_open { Some(port_now) } else { None },
                 message: Some("not owned — left untouched".into()),
             });
         }

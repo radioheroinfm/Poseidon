@@ -519,3 +519,11 @@ Prepares Spike 1 mount of upstream renderer without undefined crashes.
 - Зафиксирован прорыв в `docs/AUDIT_REPORT_EPOCH_3_TICKET_WS.md`: подтверждены фиксы стабов (`841a039`), снятие живых фактов `HERMES_FACTS_2026-11-14.md` / `ENSURE_AND_TICKET_2026-11-14.md` и реализация `local_gateway.rs` под `#[cfg(unix)]`.
 - Выявлена причина падения CI (`runs #11–#13` на `ubuntu`/`macos`/`windows`): рассинхрон `getGatewayWsUrl` между `install-hermes-desktop.ts` и `hermes-desktop-types.ts` (`TS2322` в `tsc --noEmit`).
 - Отмечены к исправлению: отсутствие `spawn_blocking` в `get_gateway_ws_url` / `gateway_ensure_json`, логирование `ticket` в `debug!`, усечённый `find_hermes_bin()`, неполная валидация `protocol/id/profile_id` и расхождение `getConnection()` с `ensure --json`.
+
+### 2026-11-14 — Аудит №7: TS2322 + spawn_blocking + ticket hygiene
+
+По отчёту Жени:
+- `GatewayWsUrlResult` в types.ts синхронизирован с реализацией (CI tsc)
+- `get_gateway_ws_url` / `gateway_ensure_json` → `spawn_blocking`
+- ticket не логируется; protocol/id/profile_id валидируются
+- stop() !owned → port None; hermes_home/url_encode/parse ensure hardened

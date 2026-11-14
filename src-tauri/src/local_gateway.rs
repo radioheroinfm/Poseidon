@@ -46,7 +46,10 @@ pub struct EnsurePayload {
 
 fn hermes_home() -> PathBuf {
     if let Ok(h) = std::env::var("HERMES_HOME") {
-        return PathBuf::from(h);
+        let h = h.trim();
+        if !h.is_empty() {
+            return PathBuf::from(h);
+        }
     }
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
@@ -54,7 +57,21 @@ fn hermes_home() -> PathBuf {
 }
 
 fn find_hermes_bin() -> PathBuf {
-    which::which("hermes").unwrap_or_else(|_| PathBuf::from("hermes"))
+    if let Ok(p) = which::which("hermes") {
+        return p;
+    }
+    if let Some(home) = dirs::home_dir() {
+        for cand in [
+            home.join(".hermes/bin/hermes"),
+            home.join(".local/bin/hermes"),
+            home.join("hermes-agent/.venv/bin/hermes"),
+        ] {
+            if cand.exists() {
+                return cand;
+            }
+        }
+    }
+    PathBuf::from("hermes")
 }
 
 /// Run `hermes gateway ensure --json` and parse endpoint.
@@ -78,10 +95,16 @@ pub fn gateway_ensure_json() -> Result<EnsurePayload, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    // One JSON object — may be single line
+    let trimmed = stdout.trim();
+    if let Ok(p) = serde_json::from_str::<EnsurePayload>(trimmed) {
+        return Ok(p);
+    }
+    // Fallback: last JSON-looking line
     let line = stdout
         .lines()
-        .find(|l| l.trim().starts_with('{'))
+        .rev()
+        .map(str::trim)
+        .find(|l| l.starts_with('{'))
         .ok_or_else(|| format!("no JSON in ensure stdout: {}", stdout))?;
 
     serde_json::from_str(line).map_err(|e| format!("parse ensure JSON: {} ({})", e, line))
@@ -143,15 +166,21 @@ pub fn mint_session_ticket(
         .read_line(&mut line)
         .map_err(|e| format!("read ticket reply: {}", e))?;
 
-    debug!("ticket reply: {}", line.trim());
+    debug!("ticket reply received ({} bytes)", line.trim().len());
 
     let reply: serde_json::Value = serde_json::from_str(line.trim())
-        .map_err(|e| format!("parse ticket reply: {} ({})", e, line))?;
+        .map_err(|e| format!("parse ticket reply: {}", e))?;
 
+    if reply.get("protocol").and_then(|v| v.as_u64()) != Some(1) {
+        return Err("ticket reply protocol != 1".into());
+    }
+    if reply.get("id").and_then(|v| v.as_u64()) != Some(1) {
+        return Err("ticket reply id != 1".into());
+    }
     if reply.get("ok").and_then(|v| v.as_bool()) != Some(true) {
         return Err(format!(
             "ticket denied: {}",
-            reply.get("error").unwrap_or(&reply)
+            reply.get("error").and_then(|e| e.as_str()).unwrap_or("unknown")
         ));
     }
 
@@ -164,12 +193,19 @@ pub fn mint_session_ticket(
         .and_then(|t| t.as_str())
         .ok_or_else(|| "ticket reply missing result.ticket".to_string())?;
 
-    // Validate instance/profile when present
     if let Some(iid) = grant.get("instance_id").and_then(|v| v.as_str()) {
         if iid != instance_id {
             return Err(format!(
                 "ticket instance_id mismatch: {} != {}",
                 iid, instance_id
+            ));
+        }
+    }
+    if let Some(pid) = grant.get("profile_id").and_then(|v| v.as_str()) {
+        if pid != profile_id {
+            return Err(format!(
+                "ticket profile_id mismatch: {} != {}",
+                pid, profile_id
             ));
         }
     }
@@ -216,12 +252,16 @@ pub fn mint_local_ws_url() -> Result<String, String> {
 }
 
 fn url_encode(s: &str) -> String {
-    s.chars()
-        .map(|c| match c {
-            'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => c.to_string(),
-            _ => format!("%{:02X}", c as u8),
-        })
-        .collect()
+    let mut out = String::with_capacity(s.len());
+    for &b in s.as_bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char);
+            }
+            _ => out.push_str(&format!("%{:02X}", b)),
+        }
+    }
+    out
 }
 
 fn uuid_v4_simple() -> String {
