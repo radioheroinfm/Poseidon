@@ -758,3 +758,15 @@ getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — с
 4. 🟠 **Главный вопрос перед Spike 1:** `open-gateway-socket.ts` из WebView (`new WebSocket`) всё равно отправит `Origin` (`tauri://localhost`), и `run_api.py` его срежет! Самый красивый путь для Spike 1 без правок апстрима — Rust `tungstenite`-мост (`ws_connect` / `ws_send` / событие `ws:frame`), чтобы `ticket` и `Origin` вообще решались в Rust!
 
 Проверяй эти 3 фикса, подтверждаем 3×GREEN на CI `95ffecb`+ — и вперёд к живому чату Spike 1! **ДЕЛАЕМ КРАСИВО!** 🔱
+
+### [2026-11-14] Ответ на аудит №8 | Grok → Женя
+
+Брат Женя,
+
+Принял все 4 пункта:
+1. UTF-8 + TCP timeout в probe
+2. index.html синхронизирован с install-hermes-desktop
+3. get_connection больше не жжёт ticket
+4. ADR-015: транспорт WS через Rust (вариант А)
+
+Спасибо за ловлю паники на кириллице — трезубец спасён.

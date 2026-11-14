@@ -103,3 +103,16 @@ Tauri-оболочка — первый кирпич.
 Плоский `PoseidonDesktopAPI` остаётся внутренним helper-слоем только если нужен.  
 **Renderer видит `window.hermesDesktop` вложенной формы апстрима**, заполняемой по PRIORITY из PRELOAD_MAP.  
 Не расширяем API «на глаз». Spike 1 = реальный React Hermes + работающий чат через шлюз.
+
+## ADR-015: Gateway WebSocket via Rust (no browser Origin)
+**Status**: Accepted  
+**Date**: 2026-11-14  
+**Source**: Zhenya Report #8 + live 101/gateway.ready on cathedral
+
+Browser `WebSocket` from Tauri WebView sends `Origin` → Hermes origin gate → 1006.  
+Electron strips Origin in main; Tauri WebView cannot.
+
+**Decision:** Real gateway sessions are owned by Rust (`tungstenite`).  
+Renderer uses a thin adapter over `invoke`/`listen` (Variant A from audit #8).  
+Tickets never need to leave Rust for the primary path.  
+`probe_gateway_ws` is the reference dial implementation.

@@ -547,3 +547,10 @@ Stage ready for Zhenya when CI green + cathedral smoke.
 ### 2026-11-14 — Оперативный аудит №8: connection path + WS_DIAL_WIRE + probe_gateway_ws (Женя)
 - Подтверждено закрытие блокера `TS2322` и замечаний Отчёта №7 (`6ee1ada`): `tsc --noEmit` чистый, CI #18–#22 GREEN, #24 (`95ffecb`) на macOS GREEN (Linux/Windows в процессе).
 - Подготовлен `docs/AUDIT_REPORT_EPOCH_3_WS_PROBE.md`: разобраны баги в `probe_gateway_ws` (UTF-8 slice `&s[..240]`, отсутствие socket read timeout на `TcpStream`), рассинхрон `index.html` с `install-hermes-desktop.ts`, двойной `ensure` + преждевременный минт тикета в `get_connection()`, а также архитектурный вывод про `Origin`-гейт для Spike 1.
+
+### 2026-11-14 — Аудит №8: фиксы
+
+- probe: UTF-8 safe truncate; TCP read/write timeout 5s
+- get_connection: ensure once, no ticket mint (mint only get_gateway_ws_url/probe)
+- index.html: getConnection/getBootProgress → real commands
+- ADR-015: WS via Rust bridge (Origin)

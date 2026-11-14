@@ -416,18 +416,9 @@ pub async fn get_connection(
                         ),
                         None => (None, None, None, None, None),
                     };
-                    // Mint WS URL when ready
-                    let ws_url = if payload.state == "ready" && ep.is_some() {
-                        match crate::local_gateway::mint_local_ws_url() {
-                            Ok(u) => Some(u),
-                            Err(e) => {
-                                log::warn!("mint after ensure: {}", e);
-                                None
-                            }
-                        }
-                    } else {
-                        None
-                    };
+                    // Zhenya #8: do NOT mint ticket here (one-use, 30s).
+                    // Mint only in get_gateway_ws_url / probe_gateway_ws.
+                    // ensure --json already ran once above (mint_local_ws_url would ensure again).
                     let info = ConnectionInfo {
                         kind: if payload.state == "ready" {
                             "local".into()
@@ -438,17 +429,17 @@ pub async fn get_connection(
                         api_origin,
                         instance_id,
                         profile_id,
-                        ws_url,
+                        ws_url: None,
                         code_sha,
                         supervisor,
                         message: payload.detail.map(|d| d.to_string()),
                     };
                     conn.set_last(info.clone());
                     conn.set_boot(BootProgress {
-                        phase: "connected".into(),
-                        ready: info.ws_url.is_some(),
+                        phase: if info.state == "ready" { "ready".into() } else { "ensure".into() },
+                        ready: info.state == "ready",
                         detail: info.api_origin.clone(),
-                        percent: Some(if info.ws_url.is_some() { 100 } else { 70 }),
+                        percent: Some(if info.state == "ready" { 90 } else { 40 }),
                     });
                     Ok(info)
                 }

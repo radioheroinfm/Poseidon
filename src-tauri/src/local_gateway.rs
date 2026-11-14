@@ -331,7 +331,25 @@ pub fn probe_gateway_ws() -> Result<String, String> {
     );
     // Do not send Origin (tungstenite won't add browser Origin)
 
-    let (mut socket, response) = connect(req).map_err(|e| format!("ws connect: {}", e))?;
+    // TCP timeout so hung gateway cannot block forever
+    let (mut socket, response) = {
+        use std::net::TcpStream;
+        let host_port = dial_url
+            .trim_start_matches("ws://")
+            .trim_start_matches("wss://")
+            .split('/')
+            .next()
+            .ok_or_else(|| "bad dial url host".to_string())?;
+        let stream = TcpStream::connect(host_port)
+            .map_err(|e| format!("tcp connect {}: {}", host_port, e))?;
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .map_err(|e| format!("set_read_timeout: {}", e))?;
+        stream
+            .set_write_timeout(Some(Duration::from_secs(5)))
+            .map_err(|e| format!("set_write_timeout: {}", e))?;
+        tungstenite::client::client(req, stream).map_err(|e| format!("ws handshake: {}", e))?
+    };
     let status = response.status();
     let accepted = response
         .headers()
@@ -367,8 +385,9 @@ pub fn probe_gateway_ws() -> Result<String, String> {
         accepted,
         first
             .map(|s| {
-                if s.len() > 240 {
-                    format!("{}…", &s[..240])
+                let preview: String = s.chars().take(240).collect();
+                if preview.len() < s.chars().count() {
+                    format!("{}…", preview)
                 } else {
                     s
                 }

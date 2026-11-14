@@ -135,12 +135,10 @@
           if (r && typeof r === 'object' && 'ok' in r) return r;
           return r ? { ok: true, wsUrl: r } : { ok: false, error: 'no url' };
         },
-        getConnection: async () => {
-          const st = await invoke('gateway_status');
-          const wsUrl = st && st.portOpen && st.port ? ('ws://127.0.0.1:' + st.port) : null;
-          return { kind: wsUrl ? 'local' : 'none', wsUrl, port: st?.port ?? null, status: st };
-        },
-        getBootProgress: async () => ({ phase: 'poseidon-shell', ready: true }),
+        getConnection: async () => invoke('get_connection'),
+        getConnectionFor: async () => invoke('get_connection'),
+        setActiveConnectionRoute: async (route) => invoke('set_active_connection_route', { route }),
+        getBootProgress: async () => invoke('get_boot_progress'),
         openExternal: async (url) => { await invoke('open_external', { url }); },
         __poseidon: {
           getSystemInfo: () => invoke('get_system_info'),
