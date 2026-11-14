@@ -2,6 +2,7 @@
 
 use crate::gateway::{GatewayManager, GatewayStatus};
 use crate::connection_state::{ActiveRoute, BootProgress, ConnectionInfo, ConnectionState};
+use crate::ws_bridge::{WsBridge, WsStatus};
 
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -513,4 +514,44 @@ pub async fn probe_gateway_ws() -> Result<String, String> {
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+// ---------------------------------------------------------------------------
+// ADR-015 Gateway WS session (Rust-owned)
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn gateway_ws_connect(
+    app: AppHandle,
+    bridge: State<'_, Arc<WsBridge>>,
+) -> Result<WsStatus, String> {
+    let bridge = Arc::clone(&bridge);
+    tauri::async_runtime::spawn_blocking(move || bridge.connect(app))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn gateway_ws_send(
+    bridge: State<'_, Arc<WsBridge>>,
+    text: String,
+) -> Result<(), String> {
+    bridge.send_text(text)
+}
+
+#[tauri::command]
+pub async fn gateway_ws_close(
+    bridge: State<'_, Arc<WsBridge>>,
+) -> Result<WsStatus, String> {
+    bridge.close()
+}
+
+#[tauri::command]
+pub async fn gateway_ws_status(
+    bridge: State<'_, Arc<WsBridge>>,
+) -> Result<WsStatus, String> {
+    Ok(WsStatus {
+        connected: bridge.is_connected(),
+        message: None,
+    })
 }

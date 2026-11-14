@@ -7,10 +7,12 @@ mod gateway;
 mod connection_state;
 #[cfg(unix)]
 mod local_gateway;
+mod ws_bridge;
 
 use bridge::*;
 use gateway::GatewayManager;
 use connection_state::ConnectionState;
+use ws_bridge::WsBridge;
 use std::sync::Arc;
 use tauri::{Manager, RunEvent};
 
@@ -23,6 +25,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(Arc::new(GatewayManager::new()))
         .manage(Arc::new(ConnectionState::new()))
+        .manage(Arc::new(WsBridge::new()))
         .invoke_handler(tauri::generate_handler![
             // System
             get_system_info,
@@ -53,10 +56,14 @@ pub fn run() {
             get_active_connection_route,
             get_boot_progress,
             probe_gateway_ws,
+            gateway_ws_connect,
+            gateway_ws_send,
+            gateway_ws_close,
+            gateway_ws_status,
         ])
         .setup(|_app| {
             log::info!(
-                "🔱 Poseidon Desktop v{} — Epoch 2",
+                "🔱 Poseidon Desktop v{} — Epoch 3 Spike 1",
                 env!("CARGO_PKG_VERSION")
             );
             Ok(())

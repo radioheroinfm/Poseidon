@@ -1,44 +1,23 @@
 # Spike 1 — React Hermes inside Poseidon
 
 ## Goal
+Настоящий UI Hermes в Tauri WebView + чат через gateway.
 
-Настоящий UI Hermes (не placeholder) в Tauri WebView, подключённый к `hermes serve` через WS.
+## Done
+- [x] ensure --json + session-ticket mint
+- [x] Canonical dial wire (`hermes-gateway-v1` + ticket subprotocol)
+- [x] `probe_gateway_ws` → 101 + `gateway.ready` (cathedral)
+- [x] ADR-015: WS owned by Rust
+- [x] **`WsBridge`**: `gateway_ws_connect` / `send` / `close` + events `gateway-ws-frame` / `gateway-ws-status`
 
-## Strategy
+## Next
+- [ ] Thin JS adapter (WebSocket-like) over invoke/listen
+- [ ] Mount `apps/desktop` dist or Vite dev against Poseidon shell
+- [ ] First chat message round-trip
+- [ ] Origin-free path only (no browser WebSocket to gateway)
 
-1. **Shell ready (now)**  
-   Poseidon owns window + process lifecycle + `get_gateway_ws_url` / `gateway_ensure`.
-
-2. **API surface**  
-   Grow `window.hermesDesktop` only from PRELOAD_MAP P0.  
-   Missing methods: stub with safe no-op / rejected promise logged once — so renderer boot doesn't die hard.
-
-3. **Frontend swap**  
-   Options (pick after probe):
-   - A. Point `frontendDist` / devUrl at built `apps/desktop` dist from hermes-agent
-   - B. Serve Vite dev of hermes desktop against Tauri
-   - C. Minimal web client that only speaks gateway WS (if full renderer too heavy)
-
-4. **Connection**  
-   On boot: `gateway_ensure` → `get_gateway_ws_url` → feed renderer via `getConnection` / `getGatewayWsUrl`.
-
-## Local probe (Толян / Гермес)
-
-```bash
-# in hermes-agent checkout
-git rev-parse HEAD  # expect 2bd378ed or note drift
-# run desktop once, DevTools → which hermesDesktop.* called on first chat paint
-```
-
-## Success
-
-- [ ] Window shows Hermes chat UI  
-- [ ] Can send a message and get a response via local gateway  
-- [ ] Closing Poseidon does not kill attached-only gateway; kills owned gateway  
-
-## Stub policy (implemented)
-
-`withHermesStubs` / placeholder Proxy:
-- Real P0 methods work.
-- Any other `hermesDesktop.*` access logs once and returns async null / nested stub.
-- Prevents hard crash when mounting upstream renderer before full API coverage.
+## Smoke (cathedral)
+1. WS Connect → STATUS connected
+2. FRAME with gateway.ready
+3. WS Ping → response frame
+4. WS Close

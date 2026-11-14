@@ -558,3 +558,10 @@ Stage ready for Zhenya when CI green + cathedral smoke.
 ### 2026-11-14 — Приёмка фиксов №8 (`fc76a31`) и старт Spike 1 (Женя)
 - Приняты фиксы `fc76a31`: единичный `ensure` в `get_connection` без сжигания тикета, TCP 5s timeout в `probe_gateway_ws`, синхронизация `index.html`, принят `ADR-015` (WS через Rust `tungstenite`).
 - Зафиксированы 3 попутные мелочи к первому шагу Spike 1: `preview.len()` (байты) vs `chars().count()` в `local_gateway.rs:389`, `#[serde(default)]` на `ActiveRoute` в `connection_state.rs`, и неиспользуемый импорт `tungstenite::connect`.
+
+### 2026-11-14 — Spike 1: WsBridge transport
+
+- `ws_bridge.rs`: connect (mint+canonical dial), send, close
+- Events: `gateway-ws-frame`, `gateway-ws-status`
+- Commands: gateway_ws_connect / send / close / status
+- Placeholder buttons: WS Connect, Ping, Close

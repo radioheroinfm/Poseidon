@@ -92,6 +92,9 @@
     <button id="btn-connect">Get Connection</button>
     <button id="btn-ws">WS URL</button>
     <button id="btn-wsprobe">Probe WS</button>
+    <button id="btn-ws-connect">WS Connect</button>
+    <button id="btn-ws-ping">WS Ping</button>
+    <button id="btn-ws-close">WS Close</button>
     <button id="btn-min">Minimize</button>
     <button id="btn-close">Close</button>
   </div>
@@ -209,6 +212,23 @@
     document.getElementById('btn-connect').onclick = () => call('get_connection');
     document.getElementById('btn-ws').onclick = () => call('get_gateway_ws_url');
     document.getElementById('btn-wsprobe').onclick = () => call('probe_gateway_ws');
+    document.getElementById('btn-ws-connect').onclick = () => call('gateway_ws_connect');
+    document.getElementById('btn-ws-ping').onclick = async () => {
+      const frame = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'gateway.ping', params: {} });
+      log('send ' + frame);
+      await call('gateway_ws_send', { text: frame });
+    };
+    document.getElementById('btn-ws-close').onclick = () => call('gateway_ws_close');
+
+    // ADR-015 events
+    try {
+      const { listen } = window.__TAURI__.event;
+      listen('gateway-ws-frame', (e) => log('FRAME ' + (typeof e.payload === 'string' ? e.payload.slice(0, 200) : JSON.stringify(e.payload).slice(0, 200))));
+      listen('gateway-ws-status', (e) => log('STATUS ' + JSON.stringify(e.payload)));
+      log('listening gateway-ws-frame / gateway-ws-status');
+    } catch (e) {
+      log('event listen unavailable: ' + e);
+    }
     document.getElementById('btn-min').onclick = () => call('window_minimize');
     document.getElementById('btn-close').onclick = () => call('window_close');
 
