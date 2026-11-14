@@ -1,6 +1,7 @@
 //! Tauri commands, вызываемые из desktop-bridge.
 
 use crate::gateway::{GatewayManager, GatewayStatus};
+use crate::connection_state::{ActiveRoute, BootProgress, ConnectionInfo, ConnectionState};
 
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -381,4 +382,127 @@ pub async fn gateway_ensure(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+
+// ---------------------------------------------------------------------------
+// Connection (Epoch 3 P0 — ensure + route + boot)
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn get_connection(
+    conn: State<'_, Arc<ConnectionState>>,
+) -> Result<ConnectionInfo, String> {
+    let conn = Arc::clone(&conn);
+    tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(unix)]
+        {
+            conn.set_boot(BootProgress {
+                phase: "ensure".into(),
+                ready: false,
+                detail: Some("hermes gateway ensure --json".into()),
+                percent: Some(30),
+            });
+            match crate::local_gateway::gateway_ensure_json() {
+                Ok(payload) => {
+                    let ep = payload.endpoint;
+                    let (api_origin, instance_id, profile_id, code_sha, supervisor) = match &ep {
+                        Some(e) => (
+                            Some(e.api_origin.clone()),
+                            Some(e.instance_id.clone()),
+                            Some(e.profile_id.clone()),
+                            e.code_sha.clone(),
+                            e.supervisor.clone(),
+                        ),
+                        None => (None, None, None, None, None),
+                    };
+                    // Mint WS URL when ready
+                    let ws_url = if payload.state == "ready" && ep.is_some() {
+                        match crate::local_gateway::mint_local_ws_url() {
+                            Ok(u) => Some(u),
+                            Err(e) => {
+                                log::warn!("mint after ensure: {}", e);
+                                None
+                            }
+                        }
+                    } else {
+                        None
+                    };
+                    let info = ConnectionInfo {
+                        kind: if payload.state == "ready" {
+                            "local".into()
+                        } else {
+                            "none".into()
+                        },
+                        state: payload.state,
+                        api_origin,
+                        instance_id,
+                        profile_id,
+                        ws_url,
+                        code_sha,
+                        supervisor,
+                        message: payload.detail.map(|d| d.to_string()),
+                    };
+                    conn.set_last(info.clone());
+                    conn.set_boot(BootProgress {
+                        phase: "connected".into(),
+                        ready: info.ws_url.is_some(),
+                        detail: info.api_origin.clone(),
+                        percent: Some(if info.ws_url.is_some() { 100 } else { 70 }),
+                    });
+                    Ok(info)
+                }
+                Err(e) => {
+                    let info = ConnectionInfo {
+                        kind: "none".into(),
+                        state: "error".into(),
+                        message: Some(e.clone()),
+                        ..ConnectionInfo::default()
+                    };
+                    conn.set_last(info.clone());
+                    conn.set_boot(BootProgress {
+                        phase: "error".into(),
+                        ready: false,
+                        detail: Some(e.clone()),
+                        percent: Some(0),
+                    });
+                    Ok(info)
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            Ok(ConnectionInfo {
+                kind: "none".into(),
+                state: "unsupported".into(),
+                message: Some("local connection path is unix-only for now".into()),
+                ..ConnectionInfo::default()
+            })
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn set_active_connection_route(
+    conn: State<'_, Arc<ConnectionState>>,
+    route: ActiveRoute,
+) -> Result<ActiveRoute, String> {
+    conn.set_route(route.clone());
+    Ok(route)
+}
+
+#[tauri::command]
+pub async fn get_active_connection_route(
+    conn: State<'_, Arc<ConnectionState>>,
+) -> Result<ActiveRoute, String> {
+    Ok(conn.get_route())
+}
+
+#[tauri::command]
+pub async fn get_boot_progress(
+    conn: State<'_, Arc<ConnectionState>>,
+) -> Result<BootProgress, String> {
+    Ok(conn.get_boot())
 }

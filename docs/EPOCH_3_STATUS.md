@@ -1,27 +1,23 @@
 # Эпоха 3 — Статус
 
-## Сделано
+## Сделано (connection path stage)
 
-- [x] PRELOAD_MAP черновик (`docs/upstream/PRELOAD_MAP.md`)
-- [x] ADR-014: nested `hermesDesktop`
-- [x] P0 types + install module
-- [x] placeholder: `window.hermesDesktop` P0+
-- [x] Rust: `get_gateway_ws_url`, `gateway_ensure`
-- [x] UI buttons: Ensure Gateway, WS URL
-- [x] Live: `ws://127.0.0.1:9119` after Ensure Gateway (dynamic port)
-- [x] Stubs fixed: `on*` → unsubscribe fn; bool flags → false (Женя №6)
-- [x] Gateway stderr → warn! drain
-- [x] Probe WS button in placeholder
-- [x] `hermes gateway ensure --json` + session-ticket mint (unix)
-- [x] getGatewayWsUrl → real dial URL with ticket
+- [x] PRELOAD_MAP + ADR-014
+- [x] ensure --json + session-ticket mint (unix)
+- [x] getGatewayWsUrl → `{ok, wsUrl}` + minted ticket URL
+- [x] **get_connection** — ensure + mint + ConnectionInfo
+- [x] **setActiveConnectionRoute** / get route
+- [x] **get_boot_progress** — фазы ensure/connected/error
+- [x] stubs: on* unsub, bool false
+- [x] golden trident icon + desktop launcher
 
 ## Spike 1 — ещё открыто
 
-- [ ] Boot trace: какие ключи при первом paint чата (локальный Hermes Electron)
-- [ ] Подключить build `apps/desktop` как frontend
-- [ ] Реальный чат через WS (протокол/токен)
-- [ ] Discovery шлюза как у апстрима (не только READY/порт)
+- [ ] Mount real Hermes `apps/desktop` renderer
+- [ ] onBootProgress event stream (not only poll)
+- [ ] Windows path for ticket (python client)
+- [ ] Реальный чат через WS
 
-## Критерий «Эпоха 3 done»
+## Готовность к аудиту Жени
 
-Чат Hermes в окне Poseidon, сообщения ходят через gateway.
+Срез: connection path complete. Смоук: Get Connection / WS URL / Probe WS.

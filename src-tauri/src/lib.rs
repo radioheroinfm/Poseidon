@@ -4,11 +4,13 @@
 
 mod bridge;
 mod gateway;
+mod connection_state;
 #[cfg(unix)]
 mod local_gateway;
 
 use bridge::*;
 use gateway::GatewayManager;
+use connection_state::ConnectionState;
 use std::sync::Arc;
 use tauri::{Manager, RunEvent};
 
@@ -20,6 +22,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(Arc::new(GatewayManager::new()))
+        .manage(Arc::new(ConnectionState::new()))
         .invoke_handler(tauri::generate_handler![
             // System
             get_system_info,
@@ -45,6 +48,10 @@ pub fn run() {
             get_gateway_ws_url,
             gateway_ensure,
             gateway_ensure_json,
+            get_connection,
+            set_active_connection_route,
+            get_active_connection_route,
+            get_boot_progress,
         ])
         .setup(|_app| {
             log::info!(

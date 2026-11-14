@@ -527,3 +527,12 @@ Prepares Spike 1 mount of upstream renderer without undefined crashes.
 - `get_gateway_ws_url` / `gateway_ensure_json` → `spawn_blocking`
 - ticket не логируется; protocol/id/profile_id валидируются
 - stop() !owned → port None; hermes_home/url_encode/parse ensure hardened
+
+### 2026-11-14 — Connection path stage complete
+
+- `connection_state.rs` + commands: get_connection, set_active_connection_route, get_boot_progress
+- get_connection = ensure --json + ticket mint → ConnectionInfo
+- hermesDesktop P0: getConnection / getConnectionFor / setActiveConnectionRoute / getBootProgress
+- placeholder: Get Connection button
+
+Stage ready for Zhenya when CI green + cathedral smoke.

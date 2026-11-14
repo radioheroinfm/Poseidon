@@ -2,8 +2,10 @@ import type {
   HermesDesktopP0,
   GatewayStatus,
   SystemInfo,
-  ConnectionDescriptor,
+  ConnectionInfo,
   GatewayWsUrlResult,
+  ActiveRoute,
+  BootProgress,
 } from './hermes-desktop-types';
 import { withHermesStubs } from './hermes-desktop-proxy';
 
@@ -22,6 +24,9 @@ export function installHermesDesktopP0(): HermesDesktopP0 | null {
     return null;
   }
 
+  const getConnection = async (): Promise<ConnectionInfo> =>
+    (await invoke('get_connection')) as ConnectionInfo;
+
   const api: HermesDesktopP0 = {
     windowControls: {
       custom: true,
@@ -33,28 +38,22 @@ export function installHermesDesktopP0(): HermesDesktopP0 | null {
     getVersion: async () => String((await invoke('get_version')) ?? '0.1.0'),
 
     getGatewayWsUrl: async (): Promise<GatewayWsUrlResult> => {
-      const r = await invoke('get_gateway_ws_url') as GatewayWsUrlResult | string | null;
+      const r = await invoke('get_gateway_ws_url') as GatewayWsUrlResult;
       if (r && typeof r === 'object' && 'ok' in r) {
         if (r.ok === true && r.wsUrl) return { ok: true, wsUrl: r.wsUrl };
-        if (r.ok === false) return { ok: false, error: (r as { error?: string }).error || 'error' };
+        if (r.ok === false) return { ok: false, error: r.error || 'error' };
       }
-      if (typeof r === 'string') return { ok: true, wsUrl: r };
       return { ok: false, error: 'no url' };
     },
 
-    getConnection: async () => {
-      const st = (await invoke('gateway_status')) as GatewayStatus;
-      const wsUrl =
-        st?.portOpen && st.port ? `ws://127.0.0.1:${st.port}` : null;
-      return {
-        kind: wsUrl ? 'local' : 'none',
-        wsUrl,
-        port: st?.port ?? null,
-        status: st,
-      } satisfies ConnectionDescriptor;
-    },
+    getConnection,
+    getConnectionFor: async () => getConnection(),
 
-    getBootProgress: async () => ({ phase: 'poseidon-shell', ready: true }),
+    setActiveConnectionRoute: async (route: ActiveRoute) =>
+      (await invoke('set_active_connection_route', { route })) as ActiveRoute,
+
+    getBootProgress: async () =>
+      (await invoke('get_boot_progress')) as BootProgress,
 
     openExternal: async (url: string) => {
       await invoke('open_external', { url });
@@ -71,6 +70,6 @@ export function installHermesDesktopP0(): HermesDesktopP0 | null {
 
   const wrapped = withHermesStubs(api);
   window.hermesDesktop = wrapped;
-  console.log('[Poseidon] window.hermesDesktop P0+ with stubs installed');
+  console.log('[Poseidon] hermesDesktop P0 connection path installed');
   return wrapped;
 }

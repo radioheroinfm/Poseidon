@@ -1,6 +1,5 @@
 /**
- * Nested hermesDesktop — Epoch 3
- * Map: docs/upstream/PRELOAD_MAP.md · SHA 2bd378ed
+ * Nested hermesDesktop — Epoch 3 P0 connection path
  */
 
 export type Platform = 'darwin' | 'win32' | 'linux';
@@ -14,7 +13,6 @@ export interface GatewayStatus {
   message?: string | null;
 }
 
-/** Upstream getGatewayWsUrl result (HERMES_FACTS) */
 export type GatewayWsUrlResult =
   | { ok: true; wsUrl: string }
   | { ok: false; error: string; needsOauthLogin?: boolean };
@@ -34,21 +32,44 @@ export interface WindowControls {
   close: () => void | Promise<void>;
 }
 
-export interface ConnectionDescriptor {
-  kind: 'local' | 'none';
-  wsUrl: string | null;
-  port: number | null;
-  status: GatewayStatus;
+/** From Rust get_connection — ensure + optional minted wsUrl */
+export interface ConnectionInfo {
+  kind: string;
+  state: string;
+  apiOrigin?: string | null;
+  instanceId?: string | null;
+  profileId?: string | null;
+  wsUrl?: string | null;
+  codeSha?: string | null;
+  supervisor?: string | null;
+  message?: string | null;
+}
+
+export interface ActiveRoute {
+  connectionId?: string | null;
+  profile?: string | null;
+  registryScoped?: boolean;
+}
+
+export interface BootProgress {
+  phase: string;
+  ready: boolean;
+  detail?: string | null;
+  percent?: number | null;
 }
 
 export interface HermesDesktopP0 {
   windowControls: WindowControls;
 
   getVersion: (scope?: { connectionId?: string; profile?: string }) => Promise<string>;
-  /** Upstream-shaped: { ok, wsUrl } | { ok: false, error } */
   getGatewayWsUrl: (profile?: string) => Promise<GatewayWsUrlResult>;
-  getConnection: (profile?: string) => Promise<ConnectionDescriptor>;
-  getBootProgress: () => Promise<Record<string, unknown>>;
+  getConnection: (profile?: string) => Promise<ConnectionInfo>;
+  getConnectionFor?: (payload?: {
+    connectionId?: string | null;
+    profile?: string | null;
+  }) => Promise<ConnectionInfo>;
+  setActiveConnectionRoute: (route: ActiveRoute) => Promise<ActiveRoute>;
+  getBootProgress: () => Promise<BootProgress>;
   openExternal: (url: string) => Promise<void>;
 
   __poseidon: {
