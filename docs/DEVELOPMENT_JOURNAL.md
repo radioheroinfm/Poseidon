@@ -495,3 +495,13 @@ Prepares Spike 1 mount of upstream renderer without undefined crashes.
 - stderr шлюза дренируется в `warn!`
 - `stop().port = None` если порт закрыт
 - кнопка Probe WS в placeholder
+
+### 2026-11-14 — Hermes facts integrated (v0.23.0)
+
+Источник: `docs/upstream/HERMES_FACTS_2026-11-14.md`
+
+Ключевые правки:
+- `getGatewayWsUrl` → `{ ok, wsUrl } | { ok:false, error }`
+- URL: `/api/ws?native_dial=unminted` (полный ticket mint через gateway.sock — следующий шаг)
+- P0: getConnection(For), getGatewayWsUrl(For), boot progress, setActiveConnectionRoute
+- Discovery: `hermes gateway ensure --json` + ~/.hermes/* , не hardcode 8642

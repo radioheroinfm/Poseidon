@@ -127,7 +127,12 @@
           close: () => invoke('window_close'),
         },
         getVersion: async () => String(await invoke('get_version') ?? '0.1.0'),
-        getGatewayWsUrl: async () => await invoke('get_gateway_ws_url'),
+        getGatewayWsUrl: async () => {
+          const r = await invoke('get_gateway_ws_url');
+          // upstream: {ok, wsUrl} | string
+          if (r && typeof r === 'object' && 'ok' in r) return r;
+          return r ? { ok: true, wsUrl: r } : { ok: false, error: 'no url' };
+        },
         getConnection: async () => {
           const st = await invoke('gateway_status');
           const wsUrl = st && st.portOpen && st.port ? ('ws://127.0.0.1:' + st.port) : null;
@@ -203,8 +208,9 @@
     document.getElementById('btn-ws').onclick = () => call('get_gateway_ws_url');
     document.getElementById('btn-wsprobe').onclick = async () => {
       try {
-        const url = await invoke('get_gateway_ws_url');
-        if (!url) { log('no WS URL — Ensure Gateway first'); return; }
+        const r = await invoke('get_gateway_ws_url');
+        const url = (r && r.wsUrl) ? r.wsUrl : (typeof r === 'string' ? r : null);
+        if (!url) { log('no WS URL — Ensure Gateway first: ' + JSON.stringify(r)); return; }
         log('probing ' + url + ' ...');
         const ws = new WebSocket(url);
         const timer = setTimeout(() => { try { ws.close(); } catch(_){} log('WS probe timeout'); }, 4000);

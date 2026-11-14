@@ -32,8 +32,10 @@ export function installHermesDesktopP0(): HermesDesktopP0 | null {
     getVersion: async () => String((await invoke('get_version')) ?? '0.1.0'),
 
     getGatewayWsUrl: async () => {
-      const url = await invoke('get_gateway_ws_url');
-      return (url as string | null) ?? null;
+      const r = await invoke('get_gateway_ws_url') as { ok?: boolean; wsUrl?: string; error?: string } | string | null;
+      if (r && typeof r === 'object') return r;
+      if (typeof r === 'string') return { ok: true, wsUrl: r };
+      return { ok: false, error: 'no url' };
     },
 
     getConnection: async () => {

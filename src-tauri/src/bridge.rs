@@ -1,6 +1,16 @@
 //! Tauri commands, вызываемые из desktop-bridge.
 
 use crate::gateway::{GatewayManager, GatewayStatus};
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GatewayWsUrlResult {
+    pub ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ws_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
 use tauri::{AppHandle, Manager, Runtime, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use serde::Serialize;
@@ -300,21 +310,38 @@ mod tests {
 }
 
 
-/// WS URL for renderer (Epoch 3 P0). Null if gateway not up.
+/// Upstream-shaped result: { ok, wsUrl } | { ok: false, error }
+/// URL path: /api/ws (local may need ticket mint — Phase 3.1 partial)
 #[tauri::command]
 pub async fn get_gateway_ws_url(
     state: State<'_, Arc<GatewayManager>>,
-) -> Result<Option<String>, String> {
+) -> Result<GatewayWsUrlResult, String> {
     let st = state.status()?;
-    if st.port_open {
-        if let Some(port) = st.port {
-            return Ok(Some(format!("ws://127.0.0.1:{}", port)));
-        }
+    if !st.port_open {
+        return Ok(GatewayWsUrlResult {
+            ok: false,
+            ws_url: None,
+            error: Some("gateway port not open".into()),
+        });
     }
-    Ok(None)
+    let Some(port) = st.port else {
+        return Ok(GatewayWsUrlResult {
+            ok: false,
+            ws_url: None,
+            error: Some("no port announced".into()),
+        });
+    };
+    // Local desktop uses native_dial + ticket; until sock mint is ported,
+    // return unminted form that matches cached descriptor shape (facts report).
+    let ws_url = format!("ws://127.0.0.1:{}/api/ws?native_dial=unminted", port);
+    Ok(GatewayWsUrlResult {
+        ok: true,
+        ws_url: Some(ws_url),
+        error: None,
+    })
 }
 
-/// Ensure gateway is running; return status + ws URL for Spike 1 boot.
+
 #[tauri::command]
 pub async fn gateway_ensure(
     state: State<'_, Arc<GatewayManager>>,

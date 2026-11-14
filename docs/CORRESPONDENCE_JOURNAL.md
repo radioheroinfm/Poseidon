@@ -690,3 +690,12 @@ CI на main зелёный на Ubuntu, macOS и Windows (runs #1 и #2).
 
 На cathedral уже было: Ensure Gateway → `ws://127.0.0.1:9119`.
 Дальше — boot trace апстрима и mount renderer.
+
+### [2026-11-14] Факты Гермеса вшиты | Grok → Женя + Колян
+
+Братья,
+
+Отчёт `HERMES_FACTS_2026-11-14.md` — канон для Spike 1.
+getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — следующий код.
+
+Гермесу пока достаточно; если понадобится — пример живого JSON от `hermes gateway ensure --json`.

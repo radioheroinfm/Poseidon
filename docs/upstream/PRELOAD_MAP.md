@@ -7,20 +7,17 @@
 
 > Приоритет: P0 = нужен для Spike 1 (первый чат), P1 = скоро, P2 = позже, P3 = platform/optional.
 
-## P0 — минимальный путь к чату (гипотеза, уточняется)
+## P0 — минимум для первого экрана чата (подтверждено статикой use-gateway-boot.ts)
 
 | Key | Kind | Notes | Tauri approach |
 |-----|------|-------|----------------|
-| `getConnection` | invoke | descriptor / how to reach backend | command + gateway manager |
-| `getGatewayWsUrl` | invoke | WS URL for renderer | from READY port / attach |
-| `getVersion` | invoke | app/agent version | `get_version` / package |
-| `getBootProgress` | invoke | boot UI | stub or real from gateway start |
-| `onBootProgress` | event | boot events | Tauri event |
-| `onBackendExit` | event | backend died | emit on child exit |
-| `windowControls` | object | `{ custom, minimize, toggleMaximize, close }` | existing window_* commands |
-| `onWindowStateChanged` | event | titlebar | window events |
-| `openExternal` | invoke | links | existing open_external |
-| `getPlatform` / machine | — | often via connection/version | get_platform |
+| `getConnection` / `getConnectionFor` | invoke | ensure/spawn backend descriptor | `hermes gateway ensure --json` |
+| `getGatewayWsUrl` / `getGatewayWsUrlFor` | invoke | returns `{ok, wsUrl}\|{ok:false,error}` — mint ticket | sock ticket + `/api/ws?...` |
+| `getBootProgress` + `onBootProgress` | invoke/event | «Starting Hermes…» | progress events |
+| `setActiveConnectionRoute` | send | publish route to main | state + event |
+| `windowControls` | object | chrome (not chat, but shell) | window_* commands |
+
+Renderer then: `gateway.connect(wsUrl)` with minted URL (re-mint every attempt).
 
 ## P1 — оболочка и настройки
 
