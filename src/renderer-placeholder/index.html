@@ -89,6 +89,7 @@
     <button id="btn-gateway">Gateway Status</button>
     <button id="btn-ensure">Ensure Gateway</button>
     <button id="btn-ws">WS URL</button>
+    <button id="btn-wsprobe">Probe WS</button>
     <button id="btn-min">Minimize</button>
     <button id="btn-close">Close</button>
   </div>
@@ -142,29 +143,41 @@
           gatewayEnsure: () => invoke('gateway_ensure'),
         },
       };
-      // Safe stubs for missing upstream keys (Spike 1)
+      // Safe stubs (Zhenya audit #6): on* -> unsub fn; bool flags -> false
       const seen = new Set();
-      const stub = (path) => new Proxy(async () => null, {
-        get(_t, prop) {
-          if (prop === 'then') return undefined;
-          if (typeof prop === 'symbol') return undefined;
-          const p = path + '.' + String(prop);
-          if (!seen.has(p)) { seen.add(p); console.warn('[stub]', p); }
-          return stub(p);
-        },
-        apply() { if (!seen.has(path+'()')) { seen.add(path+'()'); console.warn('[stub call]', path); } return Promise.resolve(null); }
-      });
+      const BOOL_FLAGS = new Set(['glassSupported','translucencySupported','localModelsEnabled','assumeFreshInstall']);
+      const stub = (path, leaf) => {
+        if (/^on[A-Z]/.test(leaf)) {
+          return () => { if (!seen.has(path)) { seen.add(path); console.warn('[stub on]', path); } return () => {}; };
+        }
+        return new Proxy(async () => null, {
+          get(_t, prop) {
+            if (prop === 'then') return undefined;
+            if (typeof prop === 'symbol') return undefined;
+            const p = path + '.' + String(prop);
+            if (!seen.has(p)) { seen.add(p); console.warn('[stub]', p); }
+            return stub(p, String(prop));
+          },
+          apply() { if (!seen.has(path+'()')) { seen.add(path+'()'); console.warn('[stub call]', path); } return Promise.resolve(null); }
+        });
+      };
       window.hermesDesktop = new Proxy(window.hermesDesktop, {
         get(t, prop) {
           if (prop in t) return t[prop];
           const p = String(prop);
+          if (BOOL_FLAGS.has(p)) { if (!seen.has(p)) { seen.add(p); console.warn('[stub bool]', p); } return false; }
           if (!seen.has(p)) { seen.add(p); console.warn('[stub missing]', p); }
-          return stub(p);
+          return stub(p, p);
         },
         has() { return true; }
       });
-      statusEl.textContent = 'hermesDesktop P0+ + stubs';
-      log('hermesDesktop P0+ with safe stubs for unknown keys');
+      // Explicit false flags on real object too
+      window.hermesDesktop.glassSupported = false;
+      window.hermesDesktop.translucencySupported = false;
+      window.hermesDesktop.localModelsEnabled = false;
+      window.hermesDesktop.assumeFreshInstall = false;
+      statusEl.textContent = 'hermesDesktop P0+ + safe stubs';
+      log('P0+ stubs: on* unsubscribe, bool flags false');
     } else {
       statusEl.textContent = 'Tauri global API not found (open via tauri dev/build)';
       log('No __TAURI__ — browser-only preview');
@@ -188,6 +201,18 @@
     document.getElementById('btn-gateway').onclick = () => call('gateway_status');
     document.getElementById('btn-ensure').onclick = () => call('gateway_ensure');
     document.getElementById('btn-ws').onclick = () => call('get_gateway_ws_url');
+    document.getElementById('btn-wsprobe').onclick = async () => {
+      try {
+        const url = await invoke('get_gateway_ws_url');
+        if (!url) { log('no WS URL — Ensure Gateway first'); return; }
+        log('probing ' + url + ' ...');
+        const ws = new WebSocket(url);
+        const timer = setTimeout(() => { try { ws.close(); } catch(_){} log('WS probe timeout'); }, 4000);
+        ws.onopen = () => { clearTimeout(timer); log('WS OPEN ' + url); ws.close(); };
+        ws.onerror = (e) => { clearTimeout(timer); log('WS error (may need auth/protocol) — socket reached network layer'); };
+        ws.onclose = (ev) => { clearTimeout(timer); log('WS close code=' + ev.code + ' reason=' + (ev.reason||'')); };
+      } catch (e) { log('probe failed: ' + e); }
+    };
     document.getElementById('btn-min').onclick = () => call('window_minimize');
     document.getElementById('btn-close').onclick = () => call('window_close');
 

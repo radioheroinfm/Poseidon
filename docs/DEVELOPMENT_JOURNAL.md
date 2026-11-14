@@ -484,3 +484,14 @@ Prepares Spike 1 mount of upstream renderer without undefined crashes.
 ### 2026-11-13 — Оперативный аудит закрытия Эпохи 2 и старта Эпохи 3 (Женя, Отчёт №6)
 - Подтверждено закрытие Эпохи 2 по CI (3 ОС GREEN) и релизным размерам (`deb` 4.07 MiB), а также закрытие `R1` и `R5` в коде `aca12f4`.
 - Подготовлен `docs/AUDIT_REPORT_EPOCH_3_START.md` с ответом на замечания Коляна (§6), перечнем перенесённого техдолга Эпохи 2 (`Cargo.lock`, `clippy`, `icon.icns`, baseline) и замечаниями по старту Эпохи 3 (`24ce541` включительно).
+
+### 2026-11-14 — Аудит №6: stubs + stderr + live WS 9119
+
+**Подтверждено на cathedral:** после Ensure Gateway → `ws://127.0.0.1:9119` (динамический порт).
+
+**Фиксы по Жене №6:**
+- `on*` stubs возвращают unsubscribe `() => {}`, не Promise
+- bool flags (`glassSupported` и др.) явно `false`
+- stderr шлюза дренируется в `warn!`
+- `stop().port = None` если порт закрыт
+- кнопка Probe WS в placeholder

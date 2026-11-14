@@ -8,14 +8,17 @@
 - [x] placeholder: `window.hermesDesktop` P0+
 - [x] Rust: `get_gateway_ws_url`, `gateway_ensure`
 - [x] UI buttons: Ensure Gateway, WS URL
+- [x] Live: `ws://127.0.0.1:9119` after Ensure Gateway (dynamic port)
+- [x] Stubs fixed: `on*` → unsubscribe fn; bool flags → false (Женя №6)
+- [x] Gateway stderr → warn! drain
+- [x] Probe WS button in placeholder
 
 ## Spike 1 — ещё открыто
 
-- [ ] Узнать точный boot path renderer Hermes (какие ключи при первом paint)
-- [ ] Подключить build `apps/desktop` как frontend (или iframe/web UI)
-- [ ] Реализовать минимальный nested surface без падений на undefined
-- [ ] Реальный чат через WS шлюза
-- [ ] Discovery шлюза не только 8642 (R3)
+- [ ] Boot trace: какие ключи при первом paint чата (локальный Hermes Electron)
+- [ ] Подключить build `apps/desktop` как frontend
+- [ ] Реальный чат через WS (протокол/токен)
+- [ ] Discovery шлюза как у апстрима (не только READY/порт)
 
 ## Критерий «Эпоха 3 done»
 

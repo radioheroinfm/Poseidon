@@ -172,7 +172,7 @@ impl GatewayManager {
         cmd.arg("serve")
             .env("PYTHONUNBUFFERED", "1")
             .stdout(Stdio::piped())
-            .stderr(Stdio::null());
+            .stderr(Stdio::piped());
 
         #[cfg(unix)]
         {
@@ -222,6 +222,20 @@ impl GatewayManager {
                         }
                         Err(e) => {
                             debug!("gateway stdout closed: {}", e);
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+        if let Some(stderr) = child.stderr.take() {
+            std::thread::spawn(move || {
+                let reader = BufReader::new(stderr);
+                for line in reader.lines() {
+                    match line {
+                        Ok(line) => warn!("[hermes serve:stderr] {}", line),
+                        Err(e) => {
+                            debug!("gateway stderr closed: {}", e);
                             break;
                         }
                     }
@@ -367,12 +381,13 @@ impl GatewayManager {
 
         *owned_guard = false;
 
+        let port_open = Self::is_port_open(port_now);
         Ok(GatewayStatus {
             running: false,
             pid: None,
             owned_by_us: false,
-            port_open: Self::is_port_open(port_now),
-            port: Some(port_now),
+            port_open,
+            port: if port_open { Some(port_now) } else { None },
             message: Some("stopped".into()),
         })
     }

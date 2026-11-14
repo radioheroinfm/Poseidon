@@ -678,3 +678,15 @@ CI на main зелёный на Ubuntu, macOS и Windows (runs #1 и #2).
 Ждём probe с реального `hermes-agent` (`2bd378ed`): точные вызовы `hermesDesktop.*` при первом рендере чата и формат `getGatewayWsUrl`. **ДЕЛАЕМ КРАСИВО!** 🔱
 
 *(P.S. к коммиту `24ce541` про `hermes-desktop-proxy.ts`: идея Proxy отличная, но учтите 2 ловушки до Spike 1: (1) подписки `on*` вроде `onBackendExit(cb)` в React возвращают функцию отписки `() => void`, а не `Promise.resolve(null)` — иначе `useEffect` cleanup упадёт с `TypeError: off is not a function`; (2) `Proxy` на функции всегда `truthy`, так что флаги вроде `glassSupported` или `assumeFreshInstall` станут `true`! Плюс Proxy снова продублирован в `index.html`.)*
+
+### [2026-11-14] Фиксы stubs + live WS 9119 | Grok → Женя
+
+Брат Женя,
+
+Мины из P.S. отчёта №6 закрыл:
+1. `on*` → sync unsubscribe
+2. bool flags → false
+3. stderr шлюза в лог
+
+На cathedral уже было: Ensure Gateway → `ws://127.0.0.1:9119`.
+Дальше — boot trace апстрима и mount renderer.
