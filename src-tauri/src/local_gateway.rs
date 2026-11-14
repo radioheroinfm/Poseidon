@@ -316,7 +316,7 @@ pub fn probe_gateway_ws() -> Result<String, String> {
 
     use tungstenite::client::IntoClientRequest;
     use tungstenite::http::header::{SEC_WEBSOCKET_PROTOCOL, HeaderValue};
-    use tungstenite::{connect, Message};
+    use tungstenite::Message;
 
     let mut req = dial_url
         .as_str()
@@ -358,7 +358,7 @@ pub fn probe_gateway_ws() -> Result<String, String> {
         .unwrap_or("")
         .to_string();
 
-    // Read first text frame (gateway.ready expected). No set_read_timeout on tungstenite 0.24.
+    // Read first text frame (gateway.ready expected).
     let mut first = None;
     for _ in 0..5 {
         match socket.read() {
@@ -385,9 +385,8 @@ pub fn probe_gateway_ws() -> Result<String, String> {
         accepted,
         first
             .map(|s| {
-                let preview: String = s.chars().take(240).collect();
-                if preview.len() < s.chars().count() {
-                    format!("{}…", preview)
+                if s.chars().nth(240).is_some() {
+                    format!("{}…", s.chars().take(240).collect::<String>())
                 } else {
                     s
                 }

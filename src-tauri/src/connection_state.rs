@@ -8,6 +8,7 @@ use std::sync::Mutex;
 pub struct ActiveRoute {
     pub connection_id: Option<String>,
     pub profile: Option<String>,
+    #[serde(default)]
     pub registry_scoped: bool,
 }
 

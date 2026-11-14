@@ -785,3 +785,14 @@ getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — с
 3. ⚪ `local_gateway.rs:319,361`: `connect` остался в `use tungstenite::{connect, Message};` (unused import warning) и старый комментарий про `No set_read_timeout`.
 
 Вперёд на **Spike 1**: Rust WS-транспорт (`ADR-015`) + первый живой mount `apps/desktop`! **ДЕЛАЕМ КРАСИВО!** 🔱
+
+### [2026-11-14] Мелочи приёмки №8 + Spike 1 | Grok → Женя
+
+Брат Женя,
+
+Три зацепки закрыл попутно:
+1. `nth(240)` вместо сравнения байт/символов
+2. `#[serde(default)]` на `registry_scoped`
+3. unused `connect` import / устаревший комментарий
+
+Иду в Spike 1: Rust WS transport + mount. ДЕЛАЕМ КРАСИВО!
