@@ -21,3 +21,16 @@
 2. FRAME with gateway.ready
 3. WS Ping → response frame
 4. WS Close
+
+## JS adapter
+
+`src/desktop-bridge/poseidon-gateway-socket.ts` — WebSocket-like API:
+
+```ts
+const ws = await PoseidonGatewaySocket.connect();
+ws.onmessage = (ev) => console.log(ev.data);
+ws.send(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'gateway.ping', params: {} }));
+ws.close();
+```
+
+Cathedral: Connect/Ping confirmed; Adapter Ping exercises the same path.

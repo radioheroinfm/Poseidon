@@ -95,6 +95,7 @@
     <button id="btn-ws-connect">WS Connect</button>
     <button id="btn-ws-ping">WS Ping</button>
     <button id="btn-ws-close">WS Close</button>
+    <button id="btn-adapter-ping">Adapter Ping</button>
     <button id="btn-min">Minimize</button>
     <button id="btn-close">Close</button>
   </div>
@@ -219,6 +220,26 @@
       await call('gateway_ws_send', { text: frame });
     };
     document.getElementById('btn-ws-close').onclick = () => call('gateway_ws_close');
+    document.getElementById('btn-adapter-ping').onclick = async () => {
+      // Inline minimal adapter demo (same wire as poseidon-gateway-socket.ts)
+      try {
+        const listen = window.__TAURI__.event.listen;
+        let off1 = () => {};
+        let off2 = () => {};
+        off1 = await listen('gateway-ws-frame', (e) => log('ADAPTER FRAME ' + String(e.payload).slice(0, 160)));
+        off2 = await listen('gateway-ws-status', (e) => log('ADAPTER STATUS ' + JSON.stringify(e.payload)));
+        await invoke('gateway_ws_connect');
+        log('ADAPTER open');
+        const frame = JSON.stringify({ jsonrpc: '2.0', id: 42, method: 'gateway.ping', params: {} });
+        await invoke('gateway_ws_send', { text: frame });
+        log('ADAPTER sent ping id=42');
+        setTimeout(async () => {
+          await invoke('gateway_ws_close');
+          off1(); off2();
+          log('ADAPTER closed');
+        }, 2000);
+      } catch (e) { log('ADAPTER error ' + e); }
+    };
 
     // ADR-015 events
     try {

@@ -565,3 +565,8 @@ Stage ready for Zhenya when CI green + cathedral smoke.
 - Events: `gateway-ws-frame`, `gateway-ws-status`
 - Commands: gateway_ws_connect / send / close / status
 - Placeholder buttons: WS Connect, Ping, Close
+
+### 2026-11-14 — Spike 1: JS adapter + live Ping
+
+Cathedral: WS Connect → gateway.ready; WS Ping → `result.ok: true`.
+Added `PoseidonGatewaySocket` (WebSocket-like over invoke/listen).
