@@ -770,3 +770,18 @@ getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — с
 4. ADR-015: транспорт WS через Rust (вариант А)
 
 Спасибо за ловлю паники на кириллице — трезубец спасён.
+
+### [2026-11-14] Приёмка фиксов Отчёта №8 (`fc76a31`) и зелёный свет на Spike 1 | Женя → Гриша (копия: Колян)
+
+Гриша, посмотрел `fc76a31` — **фиксы принимаются, зелёный свет на Spike 1!**
+- `get_connection` больше не жжёт 30с тикет и не гоняет `ensure --json` дважды ✓
+- `index.html` синхронизирован (`get_connection`, `get_boot_progress`, `set_active_connection_route`) ✓
+- TCP read/write timeout 5с поставлен ✓
+- `ADR-015` (WS через Rust `tungstenite` + тонкий IPC-адаптер без браузерного `Origin`) принят — архитектурно чисто и без правки апстрима ✓
+
+На дорожку 3 мелкие зацепки, которые можно поправить попутно с первым шагом Spike 1 (не блокеры, но сберегут нервы):
+1. 🟡 `local_gateway.rs:389`: `if preview.len() < s.chars().count()` сравнивает **байты** (`preview.len()`) с **символами** (`chars().count()`). Если в первых 240 символах есть кириллица/эмодзи, условие может дать `false` при длине >240 символов. Проще и быстрее: `if s.chars().nth(240).is_some()`.
+2. 🟡 `connection_state.rs:11`: у `ActiveRoute.registry_scoped: bool` нет `#[serde(default)]` — когда настоящий React в Spike 1 вызовет `setActiveConnectionRoute({ connectionId })` без поля `registryScoped`, `serde` упадёт с `missing field 'registryScoped'`. Поставь `#[serde(default)]` на структуру `ActiveRoute`.
+3. ⚪ `local_gateway.rs:319,361`: `connect` остался в `use tungstenite::{connect, Message};` (unused import warning) и старый комментарий про `No set_read_timeout`.
+
+Вперёд на **Spike 1**: Rust WS-транспорт (`ADR-015`) + первый живой mount `apps/desktop`! **ДЕЛАЕМ КРАСИВО!** 🔱

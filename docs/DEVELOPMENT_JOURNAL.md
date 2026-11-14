@@ -554,3 +554,7 @@ Stage ready for Zhenya when CI green + cathedral smoke.
 - get_connection: ensure once, no ticket mint (mint only get_gateway_ws_url/probe)
 - index.html: getConnection/getBootProgress → real commands
 - ADR-015: WS via Rust bridge (Origin)
+
+### 2026-11-14 — Приёмка фиксов №8 (`fc76a31`) и старт Spike 1 (Женя)
+- Приняты фиксы `fc76a31`: единичный `ensure` в `get_connection` без сжигания тикета, TCP 5s timeout в `probe_gateway_ws`, синхронизация `index.html`, принят `ADR-015` (WS через Rust `tungstenite`).
+- Зафиксированы 3 попутные мелочи к первому шагу Spike 1: `preview.len()` (байты) vs `chars().count()` в `local_gateway.rs:389`, `#[serde(default)]` на `ActiveRoute` в `connection_state.rs`, и неиспользуемый импорт `tungstenite::connect`.

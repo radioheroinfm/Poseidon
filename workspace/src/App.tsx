@@ -156,7 +156,7 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-300">95ffecb</strong> • Аудит №8 (WS Probe)</span>
+              <span>Commit: <strong className="text-emerald-300">fc76a31</strong> • Spike 1 Ready (ADR-015)</span>
             </div>
           </div>
         </div>
@@ -328,8 +328,8 @@ export default function App() {
                 }`}
               >
                 <Wifi className="w-3.5 h-3.5" />
-                Отчёт №8: WS_DIAL_WIRE &amp; Probe (95ffecb)
-                <span className="px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 text-[10px]">NEW</span>
+                Отчёт №8: Приёмка fc76a31 🟢 → Spike 1
+                <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 text-[10px] border border-emerald-700/60">ACCEPTED</span>
               </button>
               <button
                 onClick={() => setAuditSubTab('audit7')}
@@ -407,18 +407,18 @@ export default function App() {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono uppercase font-bold">
-                          Отчёт №7 закрыт • tsc GREEN 🟢
+                          Фиксы №8 приняты (fc76a31) 🟢
                         </span>
                         <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700/60 text-cyan-300 text-[10px] font-mono font-bold">
-                          WS_DIAL_WIRE + tungstenite probe + иконки 🔱
+                          ADR-015 Rust WS • Зелёный свет на Spike 1 🔱
                         </span>
                         <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_3_WS_PROBE.md</span>
                       </div>
                       <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1.5">
-                        Отчёт №8 Жени (6ee1ada..95ffecb): Причина 1006 вскрыта, но 2 бага и стена Origin перед Spike 1
+                        Приёмка fc76a31: все 4 пункта Отчёта №8 закрыты — выходим на Spike 1!
                       </h2>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Гриша пофиксил <code className="text-cyan-300">TS2322</code>, <code className="text-cyan-300">spawn_blocking</code>, иконки <code className="text-cyan-300">.icns</code> и вскрыл протокол <code className="text-cyan-300">hermes-gateway-ticket</code>. Но в новом коде найдены UTF-8 panic, отсутствие read timeout, старый <code className="text-cyan-300">index.html</code> и двойной минт тикета.
+                        Гриша убрал сжигание тикета и двойной <code className="text-cyan-300">ensure</code> из <code className="text-cyan-300">get_connection</code>, синхронизировал <code className="text-cyan-300">index.html</code>, поставил TCP timeout 5с и закрепил <code className="text-cyan-300">ADR-015</code> (WS через Rust).
                       </p>
                     </div>
                   </div>
@@ -426,25 +426,24 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
                     <div className="p-4 rounded-xl bg-emerald-950/15 border border-emerald-800/60">
                       <span className="text-xs font-mono font-bold text-emerald-400 block mb-2">
-                        ✅ Принято в 6ee1ada..95ffecb
+                        ✅ Закрыто в fc76a31
                       </span>
                       <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
-                        <li><strong>Фиксы Отчёта №7:</strong> <code className="text-cyan-300 font-mono">tsc --noEmit</code> зелёный, <code className="text-cyan-300 font-mono">spawn_blocking</code> на всех sync-вызовах, тикет не пишется в <code className="text-cyan-300 font-mono">debug!</code>, <code className="text-cyan-300 font-mono">protocol/id/profile_id</code> проверяются.</li>
-                        <li><strong>Иконки Poseidon:</strong> <code className="text-cyan-300 font-mono">icon.icns</code> заменён с 8 байт на 92 KiB + <code className="text-cyan-300 font-mono">poseidon.desktop</code>.</li>
-                        <li><strong>Разведка WS_DIAL_WIRE:</strong> подтверждены <code className="text-cyan-300 font-mono">hermes-gateway-v1</code> + <code className="text-cyan-300 font-mono">hermes-gateway-ticket.&lt;ticket&gt;</code> и отсутствие <code className="text-cyan-300 font-mono">Origin</code> на upgrade.</li>
-                        <li><strong>Каркас:</strong> добавлены <code className="text-cyan-300 font-mono">connection_state.rs</code> и Rust <code className="text-cyan-300 font-mono">probe_gateway_ws</code>.</li>
+                        <li><strong>Чистый <code className="text-cyan-300 font-mono">get_connection</code>:</strong> один <code className="text-cyan-300 font-mono">ensure --json</code>, без преждевременного минта одноразового тикета.</li>
+                        <li><strong>Живой <code className="text-cyan-300 font-mono">index.html</code>:</strong> <code className="text-cyan-300 font-mono">getConnection</code>, <code className="text-cyan-300 font-mono">getBootProgress</code>, <code className="text-cyan-300 font-mono">setActiveConnectionRoute</code> ходят в реальный Rust.</li>
+                        <li><strong><code className="text-cyan-300 font-mono">probe_gateway_ws</code>:</strong> TCP read/write timeout 5с и <code className="text-cyan-300 font-mono">chars().take(240)</code> вместо байтового среза.</li>
+                        <li><strong><code className="text-cyan-300 font-mono">ADR-015</code>:</strong> Rust владеет WS-сессией (<code className="text-cyan-300 font-mono">tungstenite</code>), решая проблему <code className="text-cyan-300 font-mono">Origin</code> без правки апстрима.</li>
                       </ul>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-red-950/15 border border-red-800/60">
-                      <span className="text-xs font-mono font-bold text-red-400 block mb-2">
-                        🔴 Баги и блокер перед Spike 1
+                    <div className="p-4 rounded-xl bg-amber-950/15 border border-amber-800/60">
+                      <span className="text-xs font-mono font-bold text-amber-400 block mb-2">
+                        🟡 3 попутные мелочи к первому шагу Spike 1
                       </span>
                       <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
-                        <li><strong>🔴 UTF-8 panic + зависание (<code className="text-cyan-300 font-mono">local_gateway.rs</code>):</strong> срез <code className="text-red-300 font-mono">&amp;s[..240]</code> паникует на кириллице/эмодзи, а после удаления <code className="text-cyan-300 font-mono">set_read_timeout</code> <code className="text-cyan-300 font-mono">socket.read()</code> висит без таймаута (<code className="text-cyan-300 font-mono">TcpStream</code>).</li>
-                        <li><strong>🔴 Рассинхрон <code className="text-cyan-300 font-mono">index.html:138-143</code>:</strong> <code className="text-cyan-300 font-mono">window.hermesDesktop.getConnection()</code> в окне всё ещё дёргает старый <code className="text-cyan-300 font-mono">gateway_status</code> (8642) вместо <code className="text-cyan-300 font-mono">get_connection</code>.</li>
-                        <li><strong>🟠 Двойной минт (<code className="text-cyan-300 font-mono">bridge.rs:406-421</code>):</strong> <code className="text-cyan-300 font-mono">get_connection</code> гоняет <code className="text-cyan-300 font-mono">ensure --json</code> дважды и сразу сжигает/светит 30с тикет.</li>
-                        <li><strong>🟠 Стена <code className="text-cyan-300 font-mono">Origin</code> в Spike 1:</strong> браузерный <code className="text-cyan-300 font-mono">WebSocket</code> в WebView не может удалить <code className="text-cyan-300 font-mono">Origin</code> → нужен Rust WS-мост (<code className="text-cyan-300 font-mono">tungstenite</code> ↔ IPC).</li>
+                        <li><strong>Байты vs символы (<code className="text-cyan-300 font-mono">local_gateway.rs:389</code>):</strong> <code className="text-amber-300 font-mono">preview.len() &lt; s.chars().count()</code> сравнивает байты и chars — заменить на <code className="text-cyan-300 font-mono">s.chars().nth(240).is_some()</code>.</li>
+                        <li><strong><code className="text-cyan-300 font-mono">#[serde(default)]</code> на <code className="text-cyan-300 font-mono">ActiveRoute</code> (<code className="text-cyan-300 font-mono">connection_state.rs:11</code>):</strong> иначе React без поля <code className="text-cyan-300 font-mono">registryScoped</code> получит ошибку десериализации.</li>
+                        <li><strong>Чистота (<code className="text-cyan-300 font-mono">local_gateway.rs:319,361</code>):</strong> убрать неиспользуемый импорт <code className="text-cyan-300 font-mono">tungstenite::connect</code> и устаревший комментарий.</li>
                       </ul>
                     </div>
                   </div>
@@ -1172,7 +1171,7 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit 95ffecb • Эпоха 3 (Аудит №8)</span>
+            <span className="text-cyan-400">Commit fc76a31 • Эпоха 3 (Spike 1 Ready)</span>
           </div>
           <div className="text-slate-400">
             «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»
