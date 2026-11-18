@@ -20,6 +20,8 @@ pub struct ConnectionInfo {
     pub api_origin: Option<String>,
     pub instance_id: Option<String>,
     pub profile_id: Option<String>,
+    /// Hermes ThemeProvider: connection.profile must be a string key
+    pub profile: Option<String>,
     pub ws_url: Option<String>,
     pub code_sha: Option<String>,
     pub supervisor: Option<String>,
@@ -34,6 +36,7 @@ impl Default for ConnectionInfo {
             api_origin: None,
             instance_id: None,
             profile_id: None,
+            profile: Some("default".into()),
             ws_url: None,
             code_sha: None,
             supervisor: None,

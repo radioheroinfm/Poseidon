@@ -430,6 +430,7 @@ pub async fn get_connection(
                         api_origin,
                         instance_id,
                         profile_id,
+                        profile: Some("default".into()),
                         ws_url: None,
                         code_sha,
                         supervisor,

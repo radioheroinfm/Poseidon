@@ -300,8 +300,20 @@
         return invoke('get_version').then(function (v) { return String(v || '0.1.0'); });
       },
       getGatewayWsUrl: function () { return invoke('get_gateway_ws_url'); },
-      getConnection: function () { return invoke('get_connection'); },
-      getConnectionFor: function () { return invoke('get_connection'); },
+      getConnection: function () {
+        return invoke('get_connection').then(function (c) {
+          if (!c || typeof c !== 'object') return c;
+          var profile = (typeof c.profile === 'string' && c.profile) ? c.profile : 'default';
+          return Object.assign({}, c, { profile: profile, mode: c.mode || c.kind || 'local' });
+        });
+      },
+      getConnectionFor: function () {
+        return invoke('get_connection').then(function (c) {
+          if (!c || typeof c !== 'object') return c;
+          var profile = (typeof c.profile === 'string' && c.profile) ? c.profile : 'default';
+          return Object.assign({}, c, { profile: profile, mode: c.mode || c.kind || 'local' });
+        });
+      },
       setActiveConnectionRoute: function (route) {
         return invoke('set_active_connection_route', { route: route || {} });
       },
