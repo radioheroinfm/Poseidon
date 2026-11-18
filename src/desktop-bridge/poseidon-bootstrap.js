@@ -300,6 +300,43 @@ var NativeWebSocket = window.WebSocket;
     });
   }
 
+
+  function normalizeConnection(c) {
+    if (!c || typeof c !== "object") {
+      return {
+        kind: "none",
+        mode: "local",
+        state: "idle",
+        profile: "default",
+        connectionId: "local",
+        baseUrl: null,
+        apiOrigin: null,
+        wsUrl: null,
+        authMode: "native",
+        token: ""
+      };
+    }
+    var origin = c.apiOrigin || c.api_origin || c.baseUrl || null;
+    var profile = (typeof c.profile === "string" && c.profile) ? c.profile : "default";
+    return {
+      kind: c.kind || "local",
+      mode: c.mode || c.kind || "local",
+      state: c.state || "ready",
+      profile: profile,
+      profileId: c.profileId || c.profile_id || null,
+      connectionId: c.connectionId || c.connection_id || "local",
+      instanceId: c.instanceId || c.instance_id || null,
+      baseUrl: origin,
+      apiOrigin: origin,
+      wsUrl: c.wsUrl || c.ws_url || null,
+      authMode: c.authMode || "native",
+      token: c.token || "",
+      codeSha: c.codeSha || c.code_sha || null,
+      supervisor: c.supervisor || null,
+      message: c.message || null
+    };
+  }
+
   function installHermesDesktop() {
     var invoke = getInvokeSafe();
     if (!invoke) {
@@ -333,16 +370,12 @@ var NativeWebSocket = window.WebSocket;
       getGatewayWsUrl: function () { return invoke('get_gateway_ws_url'); },
       getConnection: function () {
         return invoke('get_connection').then(function (c) {
-          if (!c || typeof c !== 'object') return c;
-          var profile = (typeof c.profile === 'string' && c.profile) ? c.profile : 'default';
-          return Object.assign({}, c, { profile: profile, mode: c.mode || c.kind || 'local' });
+          return normalizeConnection(c);
         });
       },
       getConnectionFor: function () {
         return invoke('get_connection').then(function (c) {
-          if (!c || typeof c !== 'object') return c;
-          var profile = (typeof c.profile === 'string' && c.profile) ? c.profile : 'default';
-          return Object.assign({}, c, { profile: profile, mode: c.mode || c.kind || 'local' });
+          return normalizeConnection(c);
         });
       },
       setActiveConnectionRoute: function (route) {
@@ -478,6 +511,12 @@ assumeFreshInstall: false,
       console.log("[Poseidon] boot", b);
       poseidonShowError("boot: " + JSON.stringify(b));
     }).catch(function () {});
+    inv("get_gateway_ws_url").then(function (u) {
+      console.log("[Poseidon] get_gateway_ws_url", u);
+      poseidonShowError("wsUrl: " + JSON.stringify(u).slice(0, 180));
+    }).catch(function (e) {
+      poseidonShowError("wsUrl FAIL: " + e);
+    });
   }
   setTimeout(poseidonKickBoot, 500);
   setTimeout(poseidonKickBoot, 2500);
