@@ -40,8 +40,13 @@
 
 
   
-  // Reset storage poisoned by stubs
+  // Reset storage poisoned by stubs (once per tab)
   try {
+    if (sessionStorage.getItem("POSEIDON_STORAGE_CLEANED")) {
+      /* already cleaned this tab */
+    } else {
+    sessionStorage.setItem("POSEIDON_STORAGE_CLEANED", "1");
+
     ["hermes.desktop.profileColors", "hermes.desktop.showAllProfiles"].forEach(function (k) {
       var v = localStorage.getItem(k);
       if (v === "Default" || v === "default") {
@@ -62,6 +67,7 @@
     if (!localStorage.getItem("hermes-desktop-active-profile-v1")) {
       localStorage.setItem("hermes-desktop-active-profile-v1", "default");
     }
+  }
   } catch (e) {
     console.warn("[Poseidon] storage sanitize", e);
   }
