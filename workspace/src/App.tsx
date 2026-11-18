@@ -43,7 +43,7 @@ import ComicReader from './components/ComicReader';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator' | 'comic'>('audit');
-  const [auditSubTab, setAuditSubTab] = useState<'audit9' | 'audit8' | 'audit7' | 'epoch3' | 'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('audit9');
+  const [auditSubTab, setAuditSubTab] = useState<'kolyan_spike1' | 'audit9' | 'audit8' | 'audit7' | 'epoch3' | 'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('kolyan_spike1');
   const [searchQuery, setSearchQuery] = useState('');
   const [journalMessages, setJournalMessages] = useState<JournalMessage[]>(CORRESPONDENCE_LOGS);
   const [newMsgText, setNewMsgText] = useState('');
@@ -156,7 +156,7 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-300">3ca51fa</strong> • Spike 1 Audit #9 (CI #36 🟢)</span>
+              <span>Commit: <strong className="text-emerald-300">3ca51fa</strong> • Вариант D + Отчёт №9 (CI #36 🟢)</span>
             </div>
           </div>
         </div>
@@ -320,6 +320,18 @@ export default function App() {
             {/* Sub-tab switcher */}
             <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl w-fit flex-wrap">
               <button
+                onClick={() => setAuditSubTab('kolyan_spike1')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                  auditSubTab === 'kolyan_spike1'
+                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                Колян №6 (Spike 1): Вариант D
+                <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 text-[10px] border border-emerald-700/60">NEW</span>
+              </button>
+              <button
                 onClick={() => setAuditSubTab('audit9')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                   auditSubTab === 'audit9'
@@ -328,7 +340,7 @@ export default function App() {
                 }`}
               >
                 <Bug className="w-3.5 h-3.5" />
-                Отчёт №9: Spike 1 WS &amp; Mount (3ca51fa)
+                Отчёт №9 (Женя): Spike 1 &amp; Mount
                 <span className="px-1.5 py-0.2 rounded bg-red-950 text-red-300 text-[10px] border border-red-700/60">FIXES</span>
               </button>
               <button
@@ -410,6 +422,58 @@ export default function App() {
                 Отчёт №1: Фаза 0
               </button>
             </div>
+
+            {/* SubTab Content: Kolyan Strategic Audit #6 (Spike 1 Variant D) */}
+            {auditSubTab === 'kolyan_spike1' && (
+              <div className="space-y-4">
+                <div className="bg-[#08111e] border border-amber-700/60 rounded-2xl p-5 shadow-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-700/60 text-amber-300 text-[10px] font-mono uppercase font-bold">
+                          Стратегический аудит Коляна №6 • Spike 1
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono font-bold">
+                          Вердикт: Вариант D (синхронный с Женей #9) ✅
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_3_SPIKE1_STRATEGIC.md</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1.5">
+                        [ПРОМЕЖУТОЧНЫЙ: ТРАНСПОРТ ДОКАЗАН ЖИВЫМ DIAL&apos;ОМ, UI НЕ СМОНТИРОВАН]
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Ни A, ни B, ни C в чистом виде: Колян предложил <strong className="text-amber-300">Вариант D</strong> — глобальный синхронный <code className="text-cyan-300">WebSocket</code>-шим в <code className="text-cyan-300">initialization_script</code> (работает и в Vite dev, и в prod <code className="text-cyan-300">dist</code>). Женя снял ставку с (B) и полностью поддержал (D)!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
+                    <div className="p-4 rounded-xl bg-amber-950/15 border border-amber-800/60">
+                      <span className="text-xs font-mono font-bold text-amber-300 block mb-2">
+                        🔱 Вариант D и закрытые риски (R1, R3, R4, R7, R8)
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>Вариант D (<code className="text-cyan-300 font-mono">PoseidonWebSocket</code>):</strong> синхронный конструктор, пропускающий HMR/не-шлюзовые URL в нативный <code className="text-cyan-300 font-mono">WebSocket</code>; Rust принимает URL+протоколы и валидирует loopback, порт из <code className="text-cyan-300 font-mono">ensure</code> и <code className="text-cyan-300 font-mono">/api/ws</code>.</li>
+                        <li><strong>Единый мост (W1+W2):</strong> <code className="text-cyan-300 font-mono">WebviewWindowBuilder::initialization_script</code> + один TS-источник → IIFE-бандл → <code className="text-cyan-300 font-mono">include_str!</code> с рекурсивным Proxy и boot-trace в <code className="text-cyan-300 font-mono">append_ui_log</code>.</li>
+                        <li><strong>Закрыто:</strong> R1 (владение до READY), R3 (<code className="text-cyan-300 font-mono">HERMES_FACTS</code> + control-socket), R4 (ADR-014 + <code className="text-cyan-300 font-mono">PRELOAD_MAP</code>), R7 (<code className="text-cyan-300 font-mono">rust-version 1.85</code>), R8 (иконки), LICENSE, 4.07 MiB release.</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-red-950/15 border border-red-800/60">
+                      <span className="text-xs font-mono font-bold text-red-400 block mb-2">
+                        🔴 Что фиксим по W1–W5 и N1–N6 до SPIKE1_RESULT.md
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>W3 &amp; W5:</strong> сверить формы <code className="text-cyan-300 font-mono">getConnection</code>/<code className="text-cyan-300 font-mono">getBootProgress</code> с <code className="text-cyan-300 font-mono">connection-config.ts</code>; проинвентаризировать REST <code className="text-cyan-300 font-mono">fetch</code> к <code className="text-cyan-300 font-mono">api_origin</code>.</li>
+                        <li><strong>N1 &amp; N2 (<code className="text-cyan-300 font-mono">ws_bridge.rs</code>):</strong> убрать 1с лаг <code className="text-cyan-300 font-mono">read_timeout</code> (20–50ms / async) и перейти на карту сессий по <code className="text-cyan-300 font-mono">id</code> + <code className="text-cyan-300 font-mono">emit_to(&quot;main&quot;)</code>.</li>
+                        <li><strong>N3–N5:</strong> кэш <code className="text-cyan-300 font-mono">ensure</code> + таймаут/single-flight; заморозить <code className="text-cyan-300 font-mono">GatewayManager</code> (<code className="text-cyan-300 font-mono">serve</code> vs <code className="text-cyan-300 font-mono">gateway</code>) и уточнить <code className="text-cyan-300 font-mono">ensure</code> без systemd.</li>
+                        <li><strong>N6 &amp; артефакт:</strong> блокер релиза — строгий CSP, <code className="text-cyan-300 font-mono">withGlobalTauri: false</code>, app manifest. От Толяна: 1-я красная ошибка DevTools Console; цель Spike 1 — <code className="text-emerald-300 font-mono">SPIKE1_RESULT.md</code>.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* SubTab Content: Audit #9 (Spike 1 WsBridge + Hermes UI Mount) */}
             {auditSubTab === 'audit9' && (
@@ -1236,7 +1300,7 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit 3ca51fa • Эпоха 3 (Spike 1 Mount • Отчёт №9)</span>
+            <span className="text-cyan-400">Commit 3ca51fa • Эпоха 3 (Spike 1 → Вариант D • Колян №6 + Женя №9)</span>
           </div>
           <div className="text-slate-400">
             «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»

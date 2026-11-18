@@ -597,3 +597,14 @@ Log path: walk up to project root for logs/poseidon-ui.log.
 ### 2026-11-18 — Оперативный аудит №9: разбор Spike 1 `WsBridge` + причины белого экрана mount (Женя)
 - Приняты закрытые мелочи `20fc095`, работающий `WsBridge` (`738169c..66dc320`), dual-write лог `logs/poseidon-ui.log` (`4a2f89e`), dev-контур `dev:hermes-ui` и зелёный CI Run `#36` (`3ca51fa`) на 3 ОС + `TSC_EXIT_0`.
 - Подготовлен `docs/AUDIT_REPORT_EPOCH_3_SPIKE1_MOUNT.md`: выявлены баги ранней блокировки `__POSEIDON_BOOTSTRAPPED__` до `getInvoke()`, гонка `eval` до `initialization_script`, рассинхрон `Promise` vs sync `WebSocket` + потеря первого кадра `gateway.ready`, нерекурсивный `stub()` в `poseidon-bootstrap.js`, а также задержка 1s `read_timeout` и гонка `session_id` в `ws_bridge.rs`.
+
+
+### 2026-11-18 — Стратегический аудит Spike 1 (Колян)
+
+**Что сделано:** прочитан срез (код, доки, статус Spike 1), подготовлен `docs/AUDIT_REPORT_EPOCH_3_SPIKE1_STRATEGIC.md`.
+**Отметка аудитора (Колян):** `[ПРОМЕЖУТОЧНЫЙ: ТРАНСПОРТ ДОКАЗАН, UI НЕ СМОНТИРОВАН]`
+**Ограничения аудита:** код читался, не собирался; апстрим Hermes не проверялся.
+**Следующий шаг:** initialization_script + один TS-источник моста, WebSocket-шим, boot-trace, SPIKE1_RESULT.md с артефактами.
+
+### 2026-11-18 — Синхронизация Жени с вердиктом Коляна (вариант D)
+- Принят и поддержан стратегический вариант **(D)** Коляна (синхронный `WebSocket`-шим через `initialization_script`, один TS→IIFE источник моста и многосессионный `WsBridge` с валидацией URL в Rust).
