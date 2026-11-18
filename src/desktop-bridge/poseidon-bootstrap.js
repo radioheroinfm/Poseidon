@@ -225,16 +225,34 @@
   }
 
   function recursiveStub(path) {
+    var defaultProfile = {
+      id: "default",
+      name: "Default",
+      displayName: "Default",
+      path: "",
+      home: "",
+      kind: "local"
+    };
     return new Proxy(function () {}, {
       get: function (_t, prop) {
-        if (prop === 'then') return undefined;
         if (typeof prop === 'symbol') return undefined;
-        if (prop === 'toJSON' || prop === 'toString') return function () { return '[PoseidonStub ' + path + ']'; };
-        var p = path + '.' + String(prop);
-        if (/^on[A-Z]/.test(String(prop))) {
+        var key = String(prop);
+        // Avoid treating stub as thenable accidentally returning non-profile
+        if (key === 'then') return undefined;
+        if (key === 'toJSON') return function () { return defaultProfile; };
+        if (key === 'toString' || key === 'valueOf') return function () { return "Default"; };
+        // String fields upstream often call .trim()
+        if (key === 'name' || key === 'displayName' || key === 'id' || key === 'path' ||
+            key === 'home' || key === 'kind' || key === 'title' || key === 'label' ||
+            /Name$|Title$|Label$|Id$|Path$/.test(key)) {
+          return "Default";
+        }
+        if (key === 'profiles') return [defaultProfile];
+        if (key === 'length') return 0;
+        if (/^on[A-Z]/.test(key)) {
           return function () { return function () {}; };
         }
-        return recursiveStub(p);
+        return recursiveStub(path + '.' + key);
       },
       apply: function (_t, _this, args) {
         var inv = getInvokeSafe();
@@ -242,7 +260,8 @@
         if (inv) {
           inv('append_ui_log', { line: 'stub:' + path }).catch(function () {});
         }
-        return Promise.resolve({});
+        // Prefer profile-shaped result — callers often do (await x).name.trim()
+        return Promise.resolve(defaultProfile);
       }
     });
   }
