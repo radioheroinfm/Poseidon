@@ -1,12 +1,14 @@
 {
   "name": "poseidon-desktop",
   "version": "0.1.0",
-  "description": "Poseidon — Hermes Agent Desktop on Tauri",
+  "description": "Poseidon \u2014 Hermes Agent Desktop on Tauri",
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "dev:hermes-ui": "bash scripts/dev-hermes-ui.sh",
+    "dev:placeholder": "tauri dev"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0"

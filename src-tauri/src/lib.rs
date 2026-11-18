@@ -63,11 +63,20 @@ pub fn run() {
             append_ui_log,
             get_ui_log_path,
         ])
-        .setup(|_app| {
+        .setup(|app| {
             log::info!(
                 "🔱 Poseidon Desktop v{} — Epoch 3 Spike 1",
                 env!("CARGO_PKG_VERSION")
             );
+            // Inject hermesDesktop + PoseidonGatewaySocket before page JS
+            let bootstrap = include_str!("../../src/desktop-bridge/poseidon-bootstrap.js");
+            if let Some(w) = app.get_webview_window("main") {
+                if let Err(e) = w.eval(bootstrap) {
+                    log::warn!("bootstrap eval: {}", e);
+                } else {
+                    log::info!("Poseidon bootstrap injected into main webview");
+                }
+            }
             Ok(())
         })
         .build(tauri::generate_context!())

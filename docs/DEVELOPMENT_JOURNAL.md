@@ -576,3 +576,11 @@ Added `PoseidonGatewaySocket` (WebSocket-like over invoke/listen).
 Log confirms Probe/Connect/Ping/Adapter/Close all green.
 UI strategy: reuse Hermes apps/desktop (SPIKE1_MOUNT.md), inject PoseidonGatewaySocket.
 Log path: walk up to project root for logs/poseidon-ui.log.
+
+### 2026-11-18 — Spike 1: Hermes UI mount wiring
+
+- `poseidon-bootstrap.js` — hermesDesktop + PoseidonGatewaySocket
+- `configs/tauri.hermes-dev.json` — devUrl :5174
+- `scripts/dev-hermes-ui.sh` / `npm run dev:hermes-ui`
+- Rust setup `eval` inject bootstrap into main webview
+- SPIKE1_MOUNT.md: cathedral steps + socketFactory patch note
