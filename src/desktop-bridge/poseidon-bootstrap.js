@@ -435,7 +435,13 @@ assumeFreshInstall: false,
       initialGatewayProfile: "default",
       // Electron seeds this from main; null = no preloaded skin (backend-sync.ts)
       // Must NOT be a Proxy — (localSkin.profile ?? '').trim() runs at module load
-      localSkin: null
+      localSkin: null,
+      isPackaged: false,
+      isDev: true,
+      platform: "linux",
+      // host-capabilities often checks these
+      supportsLocalGateway: true,
+      supportsNativeTheme: true
     };
 
     window.hermesDesktop = new Proxy(api, {
@@ -487,6 +493,8 @@ assumeFreshInstall: false,
       var crash = document.querySelector("[class*='crash'], [class*='z-crash'], [data-testid*='crash']");
       var crashText = crash ? (crash.innerText || crash.textContent || "").trim().slice(0, 500) : "";
       var rootText = root ? (root.innerText || "").replace(/\s+/g, " ").trim().slice(0, 120) : "";
+      var rootHtml = root ? (root.innerHTML || "").replace(/\s+/g, " ").trim().slice(0, 200) : "";
+      console.log("[Poseidon] rootHTML", rootHtml);
       var msg = tag + " root=" + (root ? "yes" : "NO") + " text=[" + rootText + "] "+
         " bodyChildren=" + bodyKids + " title=" + document.title +
         (crashText ? (" CRASH=[" + crashText.replace(/\s+/g, " ") + "]") : " noCrashEl");
