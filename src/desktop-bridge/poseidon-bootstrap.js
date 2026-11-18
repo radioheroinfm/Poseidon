@@ -242,7 +242,7 @@
         if (inv) {
           inv('append_ui_log', { line: 'stub:' + path }).catch(function () {});
         }
-        return Promise.resolve(null);
+        return Promise.resolve({});
       }
     });
   }
@@ -253,6 +253,16 @@
       console.warn('[Poseidon] hermesDesktop deferred — no invoke yet');
       return;
     }
+
+    // Safe default profile shape (strings only — upstream calls .trim())
+    var defaultProfile = {
+      id: "default",
+      name: "Default",
+      displayName: "Default",
+      path: "",
+      home: "",
+      kind: "local"
+    };
 
     var api = {
       windowControls: {
@@ -272,6 +282,25 @@
       },
       getBootProgress: function () { return invoke('get_boot_progress'); },
       openExternal: function (url) { return invoke('open_external', { url: url }); },
+      // Profile API — was stub Proxy → (name??"").trim blew up
+      profile: {
+        getDefault: function () { return Promise.resolve(defaultProfile); },
+        get: function () { return Promise.resolve(defaultProfile); },
+        list: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
+        getAll: function () { return Promise.resolve([defaultProfile]); },
+        current: function () { return Promise.resolve(defaultProfile); },
+        getActive: function () { return Promise.resolve(defaultProfile); },
+        refresh: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
+        refreshProfiles: function () { return Promise.resolve({ profiles: [defaultProfile] }); }
+      },
+      profiles: {
+        list: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
+        get: function () { return Promise.resolve(defaultProfile); },
+        refresh: function () { return Promise.resolve({ profiles: [defaultProfile] }); }
+      },
+      listProfiles: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
+      getProfiles: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
+      refreshProfiles: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
       glassSupported: false,
       translucencySupported: false,
       localModelsEnabled: false,
