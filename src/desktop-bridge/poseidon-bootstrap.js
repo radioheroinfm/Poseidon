@@ -40,24 +40,28 @@
 
 
   
-  // Sanitize profile keys in localStorage — stored non-strings break normalizeProfileKey
+  // Reset storage poisoned by stubs
   try {
-    var keys = [];
-    for (var i = 0; i < localStorage.length; i++) {
-      keys.push(localStorage.key(i));
-    }
-    keys.forEach(function (k) {
-      if (!k) return;
-      var lk = k.toLowerCase();
-      if (lk.indexOf("profile") === -1 && lk.indexOf("gateway") === -1) return;
+    ["hermes.desktop.profileColors", "hermes.desktop.showAllProfiles"].forEach(function (k) {
       var v = localStorage.getItem(k);
-      if (v == null) return;
-      // Objects/arrays stored as JSON cannot be .trim()'d
-      if (v.charAt(0) === "{" || v.charAt(0) === "[") {
-        console.warn("[Poseidon] clearing non-string storage", k);
+      if (v === "Default" || v === "default") {
+        console.warn("[Poseidon] removing poisoned storage", k, v);
         localStorage.removeItem(k);
       }
     });
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    keys.forEach(function (k) {
+      if (!k) return;
+      var v = localStorage.getItem(k);
+      if (v === "Default") {
+        console.warn("[Poseidon] clearing Default poison", k);
+        localStorage.removeItem(k);
+      }
+    });
+    if (!localStorage.getItem("hermes-desktop-active-profile-v1")) {
+      localStorage.setItem("hermes-desktop-active-profile-v1", "default");
+    }
   } catch (e) {
     console.warn("[Poseidon] storage sanitize", e);
   }
@@ -346,25 +350,31 @@ var NativeWebSocket = window.WebSocket;
       profile: {
         getDefault: function () { return Promise.resolve(defaultProfile); },
         get: function () { return Promise.resolve(defaultProfile); },
-        list: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
+        list: function () { return Promise.resolve([defaultProfile]); },
         getAll: function () { return Promise.resolve([defaultProfile]); },
         current: function () { return Promise.resolve(defaultProfile); },
         getActive: function () { return Promise.resolve(defaultProfile); },
-        refresh: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
-        refreshProfiles: function () { return Promise.resolve({ profiles: [defaultProfile] }); }
+        refresh: function () { return Promise.resolve([defaultProfile]); },
+        refreshProfiles: function () { return Promise.resolve([defaultProfile]); }
       },
       profiles: {
-        list: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
+        list: function () { return Promise.resolve([defaultProfile]); },
         get: function () { return Promise.resolve(defaultProfile); },
         refresh: function () { return Promise.resolve({ profiles: [defaultProfile] }); }
       },
-      listProfiles: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
-      getProfiles: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
-      refreshProfiles: function () { return Promise.resolve({ profiles: [defaultProfile] }); },
+      listProfiles: function () { return Promise.resolve([defaultProfile]); },
+      getProfiles: function () { return Promise.resolve([defaultProfile]); },
+      refreshProfiles: function () { return Promise.resolve([defaultProfile]); },
       glassSupported: false,
       translucencySupported: false,
       localModelsEnabled: false,
-      assumeFreshInstall: false
+      assumeFreshInstall: false,
+      // Skin/profile boot keys must be plain strings (themes/context BOOT_PROFILE_KEY)
+      getLastProfile: function () { return Promise.resolve("default"); },
+      getActiveProfile: function () { return Promise.resolve("default"); },
+      getDisplaySkinProfile: function () { return Promise.resolve("default"); },
+      localDisplaySkinProfile: "default",
+      initialGatewayProfile: "default"
     };
 
     window.hermesDesktop = new Proxy(api, {
