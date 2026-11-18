@@ -39,7 +39,30 @@
   });
 
 
-  var NativeWebSocket = window.WebSocket;
+  
+  // Sanitize profile keys in localStorage — stored non-strings break normalizeProfileKey
+  try {
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      keys.push(localStorage.key(i));
+    }
+    keys.forEach(function (k) {
+      if (!k) return;
+      var lk = k.toLowerCase();
+      if (lk.indexOf("profile") === -1 && lk.indexOf("gateway") === -1) return;
+      var v = localStorage.getItem(k);
+      if (v == null) return;
+      // Objects/arrays stored as JSON cannot be .trim()'d
+      if (v.charAt(0) === "{" || v.charAt(0) === "[") {
+        console.warn("[Poseidon] clearing non-string storage", k);
+        localStorage.removeItem(k);
+      }
+    });
+  } catch (e) {
+    console.warn("[Poseidon] storage sanitize", e);
+  }
+
+var NativeWebSocket = window.WebSocket;
 
   function getInvoke() {
     var g = window.__TAURI__;
