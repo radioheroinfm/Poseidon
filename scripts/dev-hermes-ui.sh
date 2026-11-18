@@ -16,6 +16,11 @@ fi
 export POSEIDON_ROOT="$ROOT"
 export POSEIDON_HERMES_UI=1
 
+# Linux WebKitGTK stability (WebKitWebProcess crashes)
+export WEBKIT_DISABLE_COMPOSITING_MODE="${WEBKIT_DISABLE_COMPOSITING_MODE:-1}"
+export WEBKIT_DISABLE_DMABUF_RENDERER="${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"
+export LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-0}"
+
 # Start Vite renderer if not already up
 if ! curl -sf -o /dev/null http://127.0.0.1:5174/; then
   echo "Starting Hermes vite on 127.0.0.1:5174 ..."

@@ -83,3 +83,23 @@ npm run build
 3. Bottom-left cyan banner `Poseidon bootstrap OK` means inject worked; no banner → page never finished load or eval blocked.
 4. Hermes may crash if it expects Electron-only APIs — Console will show the first throw.
 5. CSP disabled in `configs/tauri.hermes-dev.json` (`csp: null`).
+
+## Linux: WebKitWebProcess crash
+
+If the OS reports *WebKitWebProcess critical error / closed*:
+
+```bash
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+# optional nuclear option:
+# export LIBGL_ALWAYS_SOFTWARE=1
+npm run dev:hermes-ui
+```
+
+`dev-hermes-ui.sh` sets the first two by default.
+
+Also collect:
+```bash
+journalctl --user -n 50 | grep -i webkit || true
+dmesg 2>/dev/null | tail -20
+```
