@@ -71,3 +71,15 @@ npm run build
 
 ## Log
 `POSEIDON_ROOT` set by launcher → `logs/poseidon-ui.log` under project.
+
+## White screen checklist (2026-11-18)
+
+1. Is Vite up?
+   ```bash
+   curl -sI http://127.0.0.1:5174/ | head -5
+   # open same URL in normal browser — do you see Hermes UI?
+   ```
+2. Debug build opens **DevTools** automatically — look at Console for red errors.
+3. Bottom-left cyan banner `Poseidon bootstrap OK` means inject worked; no banner → page never finished load or eval blocked.
+4. Hermes may crash if it expects Electron-only APIs — Console will show the first throw.
+5. CSP disabled in `configs/tauri.hermes-dev.json` (`csp: null`).

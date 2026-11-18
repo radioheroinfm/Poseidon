@@ -584,3 +584,11 @@ Log path: walk up to project root for logs/poseidon-ui.log.
 - `scripts/dev-hermes-ui.sh` / `npm run dev:hermes-ui`
 - Rust setup `eval` inject bootstrap into main webview
 - SPIKE1_MOUNT.md: cathedral steps + socketFactory patch note
+
+### 2026-11-18 — White screen triage
+
+- Re-inject bootstrap on PageLoadEvent::Finished
+- open_devtools in debug builds
+- hermes-dev CSP → null
+- event listen permissions
+- visible bootstrap banner for 8s

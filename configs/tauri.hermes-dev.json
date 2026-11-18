@@ -24,8 +24,10 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' http://127.0.0.1:5174; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://127.0.0.1:5174; style-src 'self' 'unsafe-inline' http://127.0.0.1:5174; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:* http://127.0.0.1:* ws://localhost:* http://localhost:* http://127.0.0.1:5174 ws://127.0.0.1:5174; img-src 'self' data: blob: http://127.0.0.1:5174; font-src 'self' data: http://127.0.0.1:5174",
-      "capabilities": ["default"]
+      "csp": null,
+      "capabilities": [
+        "default"
+      ]
     }
   },
   "bundle": {

@@ -1,6 +1,6 @@
 //! Poseidon Desktop — Tauri backend
 //!
-//! Epoch 2: buildable foundation + upstream-aligned gateway lifecycle.
+//! Epoch 3 / Spike 1: Hermes UI mount + gateway WS bridge.
 
 mod bridge;
 mod gateway;
@@ -15,6 +15,9 @@ use connection_state::ConnectionState;
 use ws_bridge::WsBridge;
 use std::sync::Arc;
 use tauri::{Manager, RunEvent};
+use tauri::webview::PageLoadEvent;
+
+const BOOTSTRAP_JS: &str = include_str!("../../src/desktop-bridge/poseidon-bootstrap.js");
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,24 +30,18 @@ pub fn run() {
         .manage(Arc::new(ConnectionState::new()))
         .manage(Arc::new(WsBridge::new()))
         .invoke_handler(tauri::generate_handler![
-            // System
             get_system_info,
             get_platform,
             get_version,
-            // Window
             window_minimize,
             window_maximize,
             window_close,
             window_is_maximized,
-            // Dialogs
             show_open_dialog,
             show_save_dialog,
-            // Shell
             open_external,
             open_path,
-            // App
             quit_app,
-            // Gateway
             gateway_start,
             gateway_stop,
             gateway_status,
@@ -68,13 +65,43 @@ pub fn run() {
                 "🔱 Poseidon Desktop v{} — Epoch 3 Spike 1",
                 env!("CARGO_PKG_VERSION")
             );
-            // Inject hermesDesktop + PoseidonGatewaySocket before page JS
-            let bootstrap = include_str!("../../src/desktop-bridge/poseidon-bootstrap.js");
+
             if let Some(w) = app.get_webview_window("main") {
-                if let Err(e) = w.eval(bootstrap) {
-                    log::warn!("bootstrap eval: {}", e);
-                } else {
-                    log::info!("Poseidon bootstrap injected into main webview");
+                // Re-inject after every full page load (Vite HMR / first navigation)
+                let w_for_load = w.clone();
+                let _ = w_for_load.on_page_load(move |window, payload| {
+                    match payload.event() {
+                        PageLoadEvent::Finished => {
+                            log::info!("page load finished — injecting bootstrap");
+                            if let Err(e) = window.eval(BOOTSTRAP_JS) {
+                                log::warn!("bootstrap eval: {}", e);
+                            }
+                            // Visible banner so white screen ≠ silent failure
+                            let _ = window.eval(
+                                r#"(function(){
+                                  if (document.getElementById('poseidon-boot-banner')) return;
+                                  var b=document.createElement('div');
+                                  b.id='poseidon-boot-banner';
+                                  b.textContent='Poseidon bootstrap OK — hermesDesktop=' + !!window.hermesDesktop;
+                                  b.style.cssText='position:fixed;z-index:2147483647;left:8px;bottom:8px;padding:6px 10px;background:#0e7499;color:#fff;font:12px monospace;border-radius:6px;opacity:0.9;pointer-events:none';
+                                  document.documentElement.appendChild(b);
+                                  setTimeout(function(){ try{b.remove();}catch(e){} }, 8000);
+                                })();"#
+                            );
+                        }
+                        _ => {}
+                    }
+                });
+
+                // First inject (may be early — page-load will repeat)
+                if let Err(e) = w.eval(BOOTSTRAP_JS) {
+                    log::warn!("early bootstrap eval: {}", e);
+                }
+
+                #[cfg(debug_assertions)]
+                {
+                    w.open_devtools();
+                    log::info!("devtools opened (debug build)");
                 }
             }
             Ok(())
@@ -82,7 +109,6 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building Poseidon Desktop")
         .run(|app, event| {
-            // On exit: stop only the gateway we own (ADR-009)
             if let RunEvent::Exit = event {
                 if let Some(state) = app.try_state::<Arc<GatewayManager>>() {
                     match state.stop() {
