@@ -305,4 +305,23 @@
     installHermesDesktop();
     if (tries > 20) clearInterval(iv);
   }, 100);
+
+  // After Vite/React should have mounted — report DOM state
+  function poseidonDomProbe(tag) {
+    try {
+      var root = document.getElementById("root") || document.getElementById("app") || document.querySelector("#root, #app, [data-hermes-root]");
+      var bodyKids = document.body ? document.body.children.length : -1;
+      var msg = tag + " root=" + (root ? ("yes html=" + (root.innerHTML || "").slice(0, 80).replace(/\s+/g, " ")) : "NO") +
+        " bodyChildren=" + bodyKids + " title=" + document.title;
+      console.log("[Poseidon]", msg);
+      poseidonShowError(msg);
+      var inv = getInvoke && getInvoke();
+      if (inv) inv("append_ui_log", { line: msg }).catch(function () {});
+    } catch (e) {
+      poseidonShowError("dom probe fail: " + e);
+    }
+  }
+  setTimeout(function () { poseidonDomProbe("t+1s"); }, 1000);
+  setTimeout(function () { poseidonDomProbe("t+3s"); }, 3000);
+  setTimeout(function () { poseidonDomProbe("t+6s"); }, 6000);
 })();
