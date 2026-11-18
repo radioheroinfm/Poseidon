@@ -79,10 +79,10 @@ pub fn run() {
                 let url = WebviewUrl::External(dev_url.parse().map_err(|e| format!("dev url: {}", e))?);
                 let builder = WebviewWindowBuilder::new(app, "main", url)
                     .title("Poseidon — Hermes Desktop")
-                    .inner_size(1280.0, 840.0)
-                    .min_inner_size(900.0, 600.0)
+                    .inner_size(1100.0, 700.0)
+                    .min_inner_size(640.0, 480.0)
                     .resizable(true)
-                    .decorations(false)
+                    .decorations(true)  // OS chrome while debugging crash UI
                     .center()
                     .initialization_script(BOOTSTRAP_JS);
                 let w = builder.build().map_err(|e| e.to_string())?;

@@ -11,14 +11,14 @@
     "windows": [
       {
         "label": "main",
-        "title": "Poseidon \u2014 Hermes Desktop",
-        "width": 1280,
-        "height": 840,
-        "minWidth": 900,
-        "minHeight": 600,
+        "title": "Poseidon — Hermes Desktop",
+        "width": 1100,
+        "height": 700,
+        "minWidth": 640,
+        "minHeight": 480,
         "resizable": true,
         "fullscreen": false,
-        "decorations": false,
+        "decorations": true,
         "center": true
       }
     ],

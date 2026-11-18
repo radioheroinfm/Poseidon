@@ -15,8 +15,18 @@
       if (!el) {
         el = document.createElement("div");
         el.id = "poseidon-error-overlay";
-        el.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;max-height:40vh;overflow:auto;background:rgba(10,10,18,0.92);color:#f8fafc;font:12px/1.4 ui-monospace,monospace;padding:10px 14px;white-space:pre-wrap;border-bottom:1px solid #334155;pointer-events:none;";
+        el.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;max-height:40vh;overflow:auto;background:rgba(10,10,18,0.92);color:#f8fafc;font:12px/1.4 ui-monospace,monospace;padding:10px 14px;white-space:pre-wrap;border-bottom:1px solid #334155;pointer-events:auto;";
         (document.body || document.documentElement).appendChild(el);
+        var btn = document.createElement("button");
+        btn.id = "poseidon-banner-close";
+        btn.textContent = "Close window";
+        btn.style.cssText = "position:fixed;top:8px;right:12px;z-index:2147483647;padding:6px 12px;background:#b91c1c;color:#fff;border:0;border-radius:6px;font:12px sans-serif;cursor:pointer;pointer-events:auto;";
+        btn.onclick = function () {
+          var inv = getInvoke && getInvoke();
+          if (inv) inv("window_close");
+          else window.close();
+        };
+        (document.body || document.documentElement).appendChild(btn);
       }
       el.textContent = (el.textContent ? el.textContent + "\n\n" : "") + String(msg);
     } catch (e) {}
