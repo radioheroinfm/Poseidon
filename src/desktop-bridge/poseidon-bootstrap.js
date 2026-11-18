@@ -15,7 +15,7 @@
       if (!el) {
         el = document.createElement("div");
         el.id = "poseidon-error-overlay";
-        el.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:#0a0a12;color:#f8fafc;font:13px/1.45 ui-monospace,monospace;padding:24px;overflow:auto;white-space:pre-wrap;";
+        el.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;max-height:40vh;overflow:auto;background:rgba(10,10,18,0.92);color:#f8fafc;font:12px/1.4 ui-monospace,monospace;padding:10px 14px;white-space:pre-wrap;border-bottom:1px solid #334155;pointer-events:none;";
         (document.body || document.documentElement).appendChild(el);
       }
       el.textContent = (el.textContent ? el.textContent + "\n\n" : "") + String(msg);
@@ -311,8 +311,11 @@
     try {
       var root = document.getElementById("root") || document.getElementById("app") || document.querySelector("#root, #app, [data-hermes-root]");
       var bodyKids = document.body ? document.body.children.length : -1;
-      var msg = tag + " root=" + (root ? ("yes html=" + (root.innerHTML || "").slice(0, 80).replace(/\s+/g, " ")) : "NO") +
-        " bodyChildren=" + bodyKids + " title=" + document.title;
+      var crash = document.querySelector("[class*='crash'], [class*='z-crash'], [data-testid*='crash']");
+      var crashText = crash ? (crash.innerText || crash.textContent || "").trim().slice(0, 500) : "";
+      var msg = tag + " root=" + (root ? "yes" : "NO") +
+        " bodyChildren=" + bodyKids + " title=" + document.title +
+        (crashText ? (" CRASH=[" + crashText.replace(/\s+/g, " ") + "]") : " noCrashEl");
       console.log("[Poseidon]", msg);
       poseidonShowError(msg);
       var inv = getInvoke && getInvoke();
