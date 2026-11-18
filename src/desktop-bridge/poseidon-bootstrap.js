@@ -8,6 +8,27 @@
   if (window.__POSEIDON_BOOTSTRAPPED__) return;
   window.__POSEIDON_BOOTSTRAPPED__ = true;
 
+  // Visible diagnostics on white screen
+  function poseidonShowError(msg) {
+    try {
+      var el = document.getElementById("poseidon-error-overlay");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "poseidon-error-overlay";
+        el.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:#0a0a12;color:#f8fafc;font:13px/1.45 ui-monospace,monospace;padding:24px;overflow:auto;white-space:pre-wrap;";
+        (document.body || document.documentElement).appendChild(el);
+      }
+      el.textContent = (el.textContent ? el.textContent + "\n\n" : "") + String(msg);
+    } catch (e) {}
+  }
+  window.addEventListener("error", function (ev) {
+    poseidonShowError("error: " + (ev.message || ev.error || ev));
+  });
+  window.addEventListener("unhandledrejection", function (ev) {
+    poseidonShowError("rejection: " + (ev.reason && (ev.reason.stack || ev.reason.message || ev.reason)));
+  });
+
+
   var NativeWebSocket = window.WebSocket;
 
   function getInvoke() {
@@ -261,6 +282,12 @@
     });
 
     console.log('[Poseidon] bootstrap: WebSocket shim + hermesDesktop ready');
+    // Some Hermes paths still read window.electronAPI
+    if (!window.electronAPI) {
+      window.electronAPI = window.hermesDesktop;
+    }
+    poseidonShowError("Poseidon bootstrap OK — location=" + location.href + " hermesDesktop=" + !!window.hermesDesktop);
+
     try {
       invoke('append_ui_log', { line: 'bootstrap ok hermesDesktop+WebSocketShim' }).catch(function () {});
     } catch (e) {}

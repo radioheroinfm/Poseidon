@@ -65,26 +65,18 @@ pub fn run() {
                 env!("CARGO_PKG_VERSION")
             );
 
-            // Prefer creating main window with initialization_script (before page JS)
-            let hermes_ui = std::env::var("POSEIDON_HERMES_UI").ok().as_deref() == Some("1")
-                || std::env::var("POSEIDON_DEV_URL").is_ok();
+            let hermes_ui = std::env::var("POSEIDON_HERMES_UI").ok().as_deref() == Some("1");
             let dev_url = std::env::var("POSEIDON_DEV_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:5174".into());
 
-            // If config already created "main", just inject; else build with init script
-            if let Some(w) = app.get_webview_window("main") {
-                log::info!("main window from config — eval bootstrap (fallback)");
-                let _ = w.eval(BOOTSTRAP_JS);
-                #[cfg(debug_assertions)]
-                {
-                    w.open_devtools();
+            // Config-merge may still create "main" without initialization_script.
+            // For Hermes UI: close it and recreate with init script BEFORE page JS.
+            if hermes_ui {
+                if let Some(w) = app.get_webview_window("main") {
+                    log::info!("closing config-created main to re-open with initialization_script");
+                    let _ = w.close();
                 }
-            } else {
-                let url = if hermes_ui {
-                    WebviewUrl::External(dev_url.parse().expect("dev url"))
-                } else {
-                    WebviewUrl::App("index.html".into())
-                };
+                let url = WebviewUrl::External(dev_url.parse().map_err(|e| format!("dev url: {}", e))?);
                 let builder = WebviewWindowBuilder::new(app, "main", url)
                     .title("Poseidon — Hermes Desktop")
                     .inner_size(1280.0, 840.0)
@@ -94,7 +86,13 @@ pub fn run() {
                     .center()
                     .initialization_script(BOOTSTRAP_JS);
                 let w = builder.build().map_err(|e| e.to_string())?;
-                log::info!("main window created with initialization_script");
+                log::info!("main recreated with initialization_script → {}", dev_url);
+                #[cfg(debug_assertions)]
+                {
+                    w.open_devtools();
+                }
+            } else if let Some(w) = app.get_webview_window("main") {
+                let _ = w.eval(BOOTSTRAP_JS);
                 #[cfg(debug_assertions)]
                 {
                     w.open_devtools();
