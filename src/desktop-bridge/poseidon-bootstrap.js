@@ -113,6 +113,7 @@ var NativeWebSocket = window.WebSocket;
     }
 
     this.url = String(url);
+    console.log("[Poseidon] gateway WS dial", this.url, protocols);
     this.protocol = '';
     this.readyState = PoseidonWebSocket.CONNECTING;
     this.bufferedAmount = 0;
