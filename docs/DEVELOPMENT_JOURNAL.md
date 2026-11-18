@@ -592,3 +592,8 @@ Log path: walk up to project root for logs/poseidon-ui.log.
 - hermes-dev CSP → null
 - event listen permissions
 - visible bootstrap banner for 8s
+
+
+### 2026-11-18 — Оперативный аудит №9: разбор Spike 1 `WsBridge` + причины белого экрана mount (Женя)
+- Приняты закрытые мелочи `20fc095`, работающий `WsBridge` (`738169c..66dc320`), dual-write лог `logs/poseidon-ui.log` (`4a2f89e`), dev-контур `dev:hermes-ui` и зелёный CI Run `#36` (`3ca51fa`) на 3 ОС + `TSC_EXIT_0`.
+- Подготовлен `docs/AUDIT_REPORT_EPOCH_3_SPIKE1_MOUNT.md`: выявлены баги ранней блокировки `__POSEIDON_BOOTSTRAPPED__` до `getInvoke()`, гонка `eval` до `initialization_script`, рассинхрон `Promise` vs sync `WebSocket` + потеря первого кадра `gateway.ready`, нерекурсивный `stub()` в `poseidon-bootstrap.js`, а также задержка 1s `read_timeout` и гонка `session_id` в `ws_bridge.rs`.

@@ -43,7 +43,7 @@ import ComicReader from './components/ComicReader';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'audit' | 'journal' | 'roadmap' | 'manifest' | 'simulator' | 'comic'>('audit');
-  const [auditSubTab, setAuditSubTab] = useState<'audit8' | 'audit7' | 'epoch3' | 'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('audit8');
+  const [auditSubTab, setAuditSubTab] = useState<'audit9' | 'audit8' | 'audit7' | 'epoch3' | 'epoch2' | 'kolyan' | 'epoch1' | 'phase0'>('audit9');
   const [searchQuery, setSearchQuery] = useState('');
   const [journalMessages, setJournalMessages] = useState<JournalMessage[]>(CORRESPONDENCE_LOGS);
   const [newMsgText, setNewMsgText] = useState('');
@@ -156,7 +156,7 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-900/90 border border-slate-800 text-slate-300">
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Commit: <strong className="text-emerald-300">fc76a31</strong> • Spike 1 Ready (ADR-015)</span>
+              <span>Commit: <strong className="text-emerald-300">3ca51fa</strong> • Spike 1 Audit #9 (CI #36 🟢)</span>
             </div>
           </div>
         </div>
@@ -320,6 +320,18 @@ export default function App() {
             {/* Sub-tab switcher */}
             <div className="flex items-center gap-2 p-1 bg-slate-900/80 border border-slate-800 rounded-xl w-fit flex-wrap">
               <button
+                onClick={() => setAuditSubTab('audit9')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                  auditSubTab === 'audit9'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Bug className="w-3.5 h-3.5" />
+                Отчёт №9: Spike 1 WS &amp; Mount (3ca51fa)
+                <span className="px-1.5 py-0.2 rounded bg-red-950 text-red-300 text-[10px] border border-red-700/60">FIXES</span>
+              </button>
+              <button
                 onClick={() => setAuditSubTab('audit8')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                   auditSubTab === 'audit8'
@@ -398,6 +410,59 @@ export default function App() {
                 Отчёт №1: Фаза 0
               </button>
             </div>
+
+            {/* SubTab Content: Audit #9 (Spike 1 WsBridge + Hermes UI Mount) */}
+            {auditSubTab === 'audit9' && (
+              <div className="space-y-4">
+                <div className="bg-[#08111e] border border-cyan-900/60 rounded-2xl p-5 shadow-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] font-mono uppercase font-bold">
+                          CI #36 GREEN (3 ОС) • WsBridge 🟢
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-red-950 border border-red-700/60 text-red-300 text-[10px] font-mono font-bold">
+                          3 крит. бага UI Mount + 2 в ws_bridge 🔴
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">docs/AUDIT_REPORT_EPOCH_3_SPIKE1_MOUNT.md</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-1.5">
+                        Отчёт №9 Жени (20fc095..3ca51fa): Rust WsBridge работает, но 4 ловушки рвут монтирование Hermes UI
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Гриша подтвердил живой <code className="text-cyan-300">gateway.ping</code> через Rust на <code className="text-cyan-300">cathedral</code> и поднял <code className="text-cyan-300">dev:hermes-ui</code>. При аудите найдена точная причина белого экрана (<code className="text-red-300">hermesDesktop=false</code>) и потери первого кадра <code className="text-cyan-300">gateway.ready</code>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
+                    <div className="p-4 rounded-xl bg-emerald-950/15 border border-emerald-800/60">
+                      <span className="text-xs font-mono font-bold text-emerald-400 block mb-2">
+                        ✅ Принято в 20fc095..3ca51fa (CI #36 GREEN)
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>Мелочи #8 закрыты (<code className="text-cyan-300 font-mono">20fc095</code>):</strong> <code className="text-cyan-300 font-mono">chars().nth(240)</code>, <code className="text-cyan-300 font-mono">#[serde(default)]</code> на <code className="text-cyan-300 font-mono">ActiveRoute</code>, убран лишний импорт <code className="text-cyan-300 font-mono">connect</code>.</li>
+                        <li><strong>Живой <code className="text-cyan-300 font-mono">WsBridge</code> (<code className="text-cyan-300 font-mono">ws_bridge.rs</code>):</strong> команды <code className="text-cyan-300 font-mono">gateway_ws_connect/send/close</code> и <code className="text-cyan-300 font-mono">gateway.ping → ok:true</code> на <code className="text-cyan-300 font-mono">cathedral</code>.</li>
+                        <li><strong>Dev-контур Spike 1:</strong> <code className="text-cyan-300 font-mono">dev:hermes-ui</code> (:5174), <code className="text-cyan-300 font-mono">configs/tauri.hermes-dev.json</code>, dual-write <code className="text-cyan-300 font-mono">logs/poseidon-ui.log</code>.</li>
+                        <li><strong>CI и TS:</strong> Run #36 зелёный на Ubuntu/macOS/Windows, <code className="text-cyan-300 font-mono">tsc --noEmit</code> чистый (0 ошибок).</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-red-950/15 border border-red-800/60">
+                      <span className="text-xs font-mono font-bold text-red-400 block mb-2">
+                        🔴 Что чинить до живого чата Hermes (и совет Коляну → B)
+                      </span>
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                        <li><strong>🔴 Ловушка bootstrap (<code className="text-cyan-300 font-mono">poseidon-bootstrap.js:8-9</code>):</strong> ставит <code className="text-red-300 font-mono">__POSEIDON_BOOTSTRAPPED__ = true</code> ДО <code className="text-cyan-300 font-mono">getInvoke()</code>! На <code className="text-cyan-300 font-mono">0ms</code> уходит без установки моста, а все ретраи <code className="text-cyan-300 font-mono">300..3000ms</code> выходят по флагу → <code className="text-red-300 font-mono">hermesDesktop=false</code>! Нужен <code className="text-cyan-300 font-mono">initialization_script</code> в <code className="text-cyan-300 font-mono">lib.rs</code>.</li>
+                        <li><strong>🔴 Promise vs sync WebSocket + потеря <code className="text-cyan-300 font-mono">gateway.ready</code>:</strong> <code className="text-cyan-300 font-mono">PoseidonGatewaySocket.connect()</code> возвращает <code className="text-red-300 font-mono">Promise</code>, а <code className="text-cyan-300 font-mono">openGatewaySocket</code> синхронный; плюс первый кадр улетает до <code className="text-cyan-300 font-mono">ws.onmessage = ...</code> → нужен sync-конструктор + очередь <code className="text-cyan-300 font-mono">_rxQueue</code>.</li>
+                        <li><strong>🔴 Нерекурсивный <code className="text-cyan-300 font-mono">stub()</code> (<code className="text-cyan-300 font-mono">poseidon-bootstrap.js:115</code>):</strong> без рекурсивного <code className="text-cyan-300 font-mono">Proxy</code> и защиты <code className="text-cyan-300 font-mono">then</code> вложенные вызовы (<code className="text-cyan-300 font-mono">settings.get()</code>) роняют React; плюс не проброшены <code className="text-cyan-300 font-mono">showOpenDialog</code> / <code className="text-cyan-300 font-mono">getSystemInfo</code>.</li>
+                        <li><strong>🟠 <code className="text-cyan-300 font-mono">ws_bridge.rs:87, 58</code>:</strong> <code className="text-cyan-300 font-mono">read_timeout(1s)</code> даёт лаг отправки чата до 1с (снизить до <code className="text-cyan-300 font-mono">50ms</code>) + нужен <code className="text-cyan-300 font-mono">session_id</code> от гонки <code className="text-cyan-300 font-mono">Outbound::Close</code>. По <code className="text-amber-300 font-mono">STATUS_FOR_KOLYAN</code> Женя голосует за <strong>(B) Vite alias</strong>.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* SubTab Content: Audit #8 (connection_state + WS_DIAL_WIRE + probe_gateway_ws) */}
             {auditSubTab === 'audit8' && (
@@ -1171,7 +1236,7 @@ export default function App() {
           <div className="flex items-center gap-2 text-slate-400">
             <span>Poseidon // Hermes Agent Rust + Tauri Migration</span>
             <span>•</span>
-            <span className="text-cyan-400">Commit fc76a31 • Эпоха 3 (Spike 1 Ready)</span>
+            <span className="text-cyan-400">Commit 3ca51fa • Эпоха 3 (Spike 1 Mount • Отчёт №9)</span>
           </div>
           <div className="text-slate-400">
             «Закон №11: Статус 'закрыто' ставит только зелёный CI на трёх ОС. ДЕЛАЕМ КРАСИВО!»

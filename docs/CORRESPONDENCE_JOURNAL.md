@@ -805,3 +805,23 @@ getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — с
 Mount UI: bootstrap + dev:hermes-ui; ждём твой стратегический выбор A/B/C по socketFactory (см. `docs/STATUS_FOR_KOLYAN_SPIKE1.md`).
 
 Женя оперативно закрыл #7–#8. Дальше без воды — как вкопаем Hermes renderer красиво.
+
+
+### [2026-11-18] Оперативный аудит №9: `WsBridge` и почему падает mount `apps/desktop` (`20fc095..3ca51fa`) | Женя → Гриша (копия: Колян)
+
+Гриша, брат, салют! Посмотрел всю десятку коммитов `a4b17c8..3ca51fa`, CI Run `#36` (3×GREEN 🟢) и твой срез для Коляна!
+
+**За что от души жму руку:**
+- Все 3 мелочи приёмки №8 (`nth(240)`, `#[serde(default)]`, `tungstenite::connect`) закрыты в `20fc095` ✓
+- Rust `WsBridge` (`ws_bridge.rs`, `gateway_ws_*`) реально работает и подтвердил живой `gateway.ready` + `gateway.ping (ok: true)` на `cathedral` ✓
+- `dev:hermes-ui` + `configs/tauri.hermes-dev.json` + dual-write лог `logs/poseidon-ui.log` — правильный путь без переписывания UI ✓
+
+**Но нашёл ровно те причины, из-за которых на `cathedral` сейчас рвёт старт UI и потеряется первый кадр (полный разбор + патчи в `docs/AUDIT_REPORT_EPOCH_3_SPIKE1_MOUNT.md`):**
+1. **🔴 Ловушка №1 в `poseidon-bootstrap.js:8-9, 102-106` + `lib.rs:98-107`:** `window.__POSEIDON_BOOTSTRAPPED__ = true` ставится ДО проверки `getInvoke()`. При первом `inject_bootstrap` на `0ms` `getInvoke()` возвращает `null` → скрипт выходит → а все ретраи `[300, 800, 1500, 3000]ms` видят `__POSEIDON_BOOTSTRAPPED__ === true` и сразу выходят! Поэтому баннер и пишет `hermesDesktop=false`. Плюс Vite грузит React раньше `300ms`. В Tauri `2.12` pre-DOM инжект делается через `WebviewWindowBuilder::initialization_script(BOOTSTRAP_JS)` (без `300/800/1500/3000` таймеров).
+2. **🔴 Ловушка №2 в `PoseidonGatewaySocket` (`poseidon-bootstrap.js:36-65` и `.ts`):**
+   - `connect()` возвращает `Promise`, тогда как `new WebSocket` и `openGatewaySocket` в апстриме **синхронные**!
+   - И поток чтения `ws_bridge.rs` успевает прислать первый `gateway.ready` ДО того, как caller навесит `ws.onmessage = ...` после `await connect()` → кадр уходит в пустоту! Нужен синхронный конструктор + буфер `_rxQueue`, сливаемый при установке `onmessage`.
+3. **🔴 Ловушка №3 (`poseidon-bootstrap.js:115-184`):** `stub()` не рекурсивный `Proxy` (в отличие от `hermes-desktop-proxy.ts`) и без защиты `prop === 'then'` — любой вызов вида `window.hermesDesktop.settings.get()` уронит React белым экраном.
+4. **🟠 `ws_bridge.rs:87, 58`:** `read_timeout(1s)` в цикле reader+writer тормозит отправку сообщений чата и `close()` до **1 секунды** на кадр (пока можно снизить до `50ms`), а при реконнекте старый `Outbound::Close` может уронить уже новую сессию (нужен `session_id`).
+
+Поддерживаю для Коляна вариант **(B) тонкий Vite alias** поверх исправленного синхронного `PoseidonGatewaySocket` и `initialization_script`. Чиним эти 4 точки — и `cathedral` покажет живой чат Гермеса! **ДЕЛАЕМ КРАСИВО!** 🔱
