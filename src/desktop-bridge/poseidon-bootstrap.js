@@ -378,7 +378,10 @@ var NativeWebSocket = window.WebSocket;
       getActiveProfile: function () { return Promise.resolve("default"); },
       getDisplaySkinProfile: function () { return Promise.resolve("default"); },
       localDisplaySkinProfile: "default",
-      initialGatewayProfile: "default"
+      initialGatewayProfile: "default",
+      // Electron seeds this from main; null = no preloaded skin (backend-sync.ts)
+      // Must NOT be a Proxy — (localSkin.profile ?? '').trim() runs at module load
+      localSkin: null
     };
 
     window.hermesDesktop = new Proxy(api, {
@@ -386,6 +389,9 @@ var NativeWebSocket = window.WebSocket;
         if (prop in t) return t[prop];
         var name = String(prop);
         if (name === 'then') return undefined;
+        // Critical: backend-sync reads localSkin at module load and calls .trim()
+        if (name === 'localSkin') return null;
+        if (name === 'localDisplaySkinProfile' || name === 'localDisplaySkinName') return null;
         if (/^on[A-Z]/.test(name)) {
           return function () { return function () {}; };
         }
