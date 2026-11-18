@@ -796,3 +796,12 @@ getGatewayWsUrl теперь upstream-shaped. Ticket mint через sock — с
 3. unused `connect` import / устаревший комментарий
 
 Иду в Spike 1: Rust WS transport + mount. ДЕЛАЕМ КРАСИВО!
+
+### [2026-11-18] Срез Spike 1 для Коляна | Grok → Колян
+
+Брат Колян,
+
+На main `3ca51fa`. Транспорт и ticket path на cathedral зелёные.
+Mount UI: bootstrap + dev:hermes-ui; ждём твой стратегический выбор A/B/C по socketFactory (см. `docs/STATUS_FOR_KOLYAN_SPIKE1.md`).
+
+Женя оперативно закрыл #7–#8. Дальше без воды — как вкопаем Hermes renderer красиво.
