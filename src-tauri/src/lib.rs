@@ -1,6 +1,5 @@
 //! Poseidon Desktop — Tauri backend
-//!
-//! Epoch 3 / Spike 1: Hermes UI mount + gateway WS bridge.
+//! Epoch 3 / Spike 1: Kolyan D — initialization_script + WebSocket shim
 
 mod bridge;
 mod gateway;
@@ -14,31 +13,9 @@ use gateway::GatewayManager;
 use connection_state::ConnectionState;
 use ws_bridge::WsBridge;
 use std::sync::Arc;
-use std::time::Duration;
-use tauri::{Manager, RunEvent};
+use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 const BOOTSTRAP_JS: &str = include_str!("../../src/desktop-bridge/poseidon-bootstrap.js");
-
-const BANNER_JS: &str = r#"(function(){
-  if (document.getElementById('poseidon-boot-banner')) return;
-  var b=document.createElement('div');
-  b.id='poseidon-boot-banner';
-  b.textContent='Poseidon bootstrap OK — hermesDesktop=' + !!window.hermesDesktop;
-  b.style.cssText='position:fixed;z-index:2147483647;left:8px;bottom:8px;padding:6px 10px;background:#0e7499;color:#fff;font:12px monospace;border-radius:6px;opacity:0.9;pointer-events:none';
-  (document.body||document.documentElement).appendChild(b);
-  setTimeout(function(){ try{b.remove();}catch(e){} }, 8000);
-})();"#;
-
-fn inject_bootstrap(app: &tauri::AppHandle) {
-    if let Some(w) = app.get_webview_window("main") {
-        if let Err(e) = w.eval(BOOTSTRAP_JS) {
-            log::warn!("bootstrap eval: {}", e);
-        } else {
-            log::info!("Poseidon bootstrap injected");
-        }
-        let _ = w.eval(BANNER_JS);
-    }
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -74,6 +51,7 @@ pub fn run() {
             get_active_connection_route,
             get_boot_progress,
             probe_gateway_ws,
+            gateway_ws_open,
             gateway_ws_connect,
             gateway_ws_send,
             gateway_ws_close,
@@ -83,27 +61,45 @@ pub fn run() {
         ])
         .setup(|app| {
             log::info!(
-                "🔱 Poseidon Desktop v{} — Epoch 3 Spike 1",
+                "🔱 Poseidon Desktop v{} — Spike 1 (Kolyan D)",
                 env!("CARGO_PKG_VERSION")
             );
 
+            // Prefer creating main window with initialization_script (before page JS)
+            let hermes_ui = std::env::var("POSEIDON_HERMES_UI").ok().as_deref() == Some("1")
+                || std::env::var("POSEIDON_DEV_URL").is_ok();
+            let dev_url = std::env::var("POSEIDON_DEV_URL")
+                .unwrap_or_else(|_| "http://127.0.0.1:5174".into());
+
+            // If config already created "main", just inject; else build with init script
             if let Some(w) = app.get_webview_window("main") {
+                log::info!("main window from config — eval bootstrap (fallback)");
+                let _ = w.eval(BOOTSTRAP_JS);
                 #[cfg(debug_assertions)]
                 {
                     w.open_devtools();
-                    log::info!("devtools opened (debug build)");
+                }
+            } else {
+                let url = if hermes_ui {
+                    WebviewUrl::External(dev_url.parse().expect("dev url"))
+                } else {
+                    WebviewUrl::App("index.html".into())
+                };
+                let builder = WebviewWindowBuilder::new(app, "main", url)
+                    .title("Poseidon — Hermes Desktop")
+                    .inner_size(1280.0, 840.0)
+                    .min_inner_size(900.0, 600.0)
+                    .resizable(true)
+                    .decorations(false)
+                    .center()
+                    .initialization_script(BOOTSTRAP_JS);
+                let w = builder.build().map_err(|e| e.to_string())?;
+                log::info!("main window created with initialization_script");
+                #[cfg(debug_assertions)]
+                {
+                    w.open_devtools();
                 }
             }
-
-            // Inject now + delayed retries (Vite page may not be ready at setup)
-            inject_bootstrap(app.handle());
-            let handle = app.handle().clone();
-            std::thread::spawn(move || {
-                for ms in [300_u64, 800, 1500, 3000] {
-                    std::thread::sleep(Duration::from_millis(ms));
-                    inject_bootstrap(&handle);
-                }
-            });
 
             Ok(())
         })
@@ -111,6 +107,9 @@ pub fn run() {
         .expect("error while building Poseidon Desktop")
         .run(|app, event| {
             if let RunEvent::Exit = event {
+                if let Some(bridge) = app.try_state::<Arc<WsBridge>>() {
+                    bridge.close_all();
+                }
                 if let Some(state) = app.try_state::<Arc<GatewayManager>>() {
                     match state.stop() {
                         Ok(status) => log::info!("Exit cleanup: {:?}", status.message),

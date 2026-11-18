@@ -1,187 +1,281 @@
 /**
- * Poseidon bootstrap — inject before Hermes apps/desktop loads.
- * - window.hermesDesktop (P0 + stubs)
- * - window.__POSEIDON_SOCKET_FACTORY__ / openGatewaySocket override hook
- * - PoseidonGatewaySocket over Rust WsBridge (ADR-015)
+ * Poseidon initialization_script (Kolyan D)
+ * - Runs BEFORE page scripts
+ * - Sync WebSocket shim for gateway URLs; native for Vite HMR etc.
+ * - Recursive hermesDesktop Proxy
  */
 (function () {
   if (window.__POSEIDON_BOOTSTRAPPED__) return;
   window.__POSEIDON_BOOTSTRAPPED__ = true;
+
+  var NativeWebSocket = window.WebSocket;
 
   function getInvoke() {
     var g = window.__TAURI__;
     if (g && g.core && g.core.invoke) return g.core.invoke.bind(g.core);
     return null;
   }
-
   function getListen() {
     var g = window.__TAURI__;
     if (g && g.event && g.event.listen) return g.event.listen.bind(g.event);
     return null;
   }
 
-  function PoseidonGatewaySocket() {
-    this.readyState = 0;
+  function isGatewayWsUrl(url) {
+    try {
+      var u = new URL(url, location.href);
+      if (u.protocol !== 'ws:' && u.protocol !== 'wss:') return false;
+      var host = u.hostname;
+      if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') return false;
+      return u.pathname === '/api/ws' || u.pathname.indexOf('/api/ws') === 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  var nextId = 1;
+
+  function PoseidonWebSocket(url, protocols) {
+    if (!(this instanceof PoseidonWebSocket)) {
+      return new PoseidonWebSocket(url, protocols);
+    }
+    // Non-gateway → native (Vite HMR, etc.)
+    if (!isGatewayWsUrl(String(url))) {
+      return new NativeWebSocket(url, protocols);
+    }
+
+    this.url = String(url);
+    this.protocol = '';
+    this.readyState = PoseidonWebSocket.CONNECTING;
+    this.bufferedAmount = 0;
+    this.binaryType = 'blob';
+    this.extensions = '';
+    this._id = 'pws-' + nextId++;
+    this._listeners = { open: [], message: [], error: [], close: [] };
     this.onopen = null;
     this.onmessage = null;
     this.onerror = null;
     this.onclose = null;
-    this._off = [];
-  }
-  PoseidonGatewaySocket.CONNECTING = 0;
-  PoseidonGatewaySocket.OPEN = 1;
-  PoseidonGatewaySocket.CLOSING = 2;
-  PoseidonGatewaySocket.CLOSED = 3;
 
-  PoseidonGatewaySocket.connect = async function () {
+    var protos = [];
+    if (typeof protocols === 'string') protos = [protocols];
+    else if (Array.isArray(protocols)) protos = protocols.slice();
+    this._protocols = protos;
+
+    var self = this;
     var invoke = getInvoke();
     var listen = getListen();
-    if (!invoke || !listen) throw new Error('Poseidon: Tauri API missing');
-    var sock = new PoseidonGatewaySocket();
-    var off1 = await listen('gateway-ws-frame', function (e) {
-      var data = typeof e.payload === 'string' ? e.payload : JSON.stringify(e.payload);
-      if (sock.onmessage) sock.onmessage({ data: data });
-    });
-    var off2 = await listen('gateway-ws-status', function (e) {
-      var st = e.payload || {};
-      if (st.connected === false && sock.readyState === 1) {
-        sock.readyState = 3;
-        if (sock.onclose) sock.onclose({ reason: st.message || '' });
-        sock._cleanup();
-      }
-    });
-    sock._off = [off1, off2];
-    try {
-      await invoke('gateway_ws_connect');
-      sock.readyState = 1;
-      if (sock.onopen) sock.onopen({ type: 'open' });
-    } catch (err) {
-      sock.readyState = 3;
-      if (sock.onerror) sock.onerror({ message: String(err) });
-      sock._cleanup();
-      throw err;
+    if (!invoke || !listen) {
+      queueMicrotask(function () {
+        self._fail('Tauri API not available');
+      });
+      return this;
     }
-    return sock;
-  };
 
-  PoseidonGatewaySocket.prototype.send = function (data) {
-    if (this.readyState !== 1) throw new Error('PoseidonGatewaySocket not OPEN');
-    var invoke = getInvoke();
-    invoke('gateway_ws_send', { text: String(data) }).catch(function (err) {
-      if (this.onerror) this.onerror({ message: String(err) });
+    this._offs = [];
+    listen('gateway-ws-frame', function (e) {
+      var p = e.payload || {};
+      if (p.id !== self._id) return;
+      var data = typeof p.data === 'string' ? p.data : JSON.stringify(p.data);
+      var ev = { data: data, type: 'message', target: self };
+      if (self.onmessage) self.onmessage(ev);
+      self._emit('message', ev);
+    }).then(function (off) { self._offs.push(off); });
+
+    listen('gateway-ws-status', function (e) {
+      var p = e.payload || {};
+      if (p.id !== self._id) return;
+      if (p.connected === true && self.readyState === PoseidonWebSocket.CONNECTING) {
+        self.readyState = PoseidonWebSocket.OPEN;
+        if (p.protocol) self.protocol = p.protocol;
+        var ev = { type: 'open', target: self };
+        if (self.onopen) self.onopen(ev);
+        self._emit('open', ev);
+      } else if (p.connected === false) {
+        var wasOpen = self.readyState === PoseidonWebSocket.OPEN || self.readyState === PoseidonWebSocket.CLOSING;
+        self.readyState = PoseidonWebSocket.CLOSED;
+        var cev = {
+          type: 'close',
+          code: p.code != null ? p.code : 1006,
+          reason: p.message || '',
+          wasClean: !!p.wasClean,
+          target: self
+        };
+        if (self.onclose) self.onclose(cev);
+        self._emit('close', cev);
+        self._cleanup();
+      }
+    }).then(function (off) { self._offs.push(off); });
+
+    invoke('gateway_ws_open', {
+      id: this._id,
+      url: this.url,
+      protocols: this._protocols
+    }).catch(function (err) {
+      self._fail(String(err));
+    });
+
+    return this;
+  }
+
+  PoseidonWebSocket.CONNECTING = 0;
+  PoseidonWebSocket.OPEN = 1;
+  PoseidonWebSocket.CLOSING = 2;
+  PoseidonWebSocket.CLOSED = 3;
+  PoseidonWebSocket.prototype.CONNECTING = 0;
+  PoseidonWebSocket.prototype.OPEN = 1;
+  PoseidonWebSocket.prototype.CLOSING = 2;
+  PoseidonWebSocket.prototype.CLOSED = 3;
+
+  PoseidonWebSocket.prototype._emit = function (type, ev) {
+    (this._listeners[type] || []).forEach(function (fn) {
+      try { fn.call(this, ev); } catch (e) { console.error(e); }
     }.bind(this));
   };
 
-  PoseidonGatewaySocket.prototype.close = function () {
-    if (this.readyState === 3) return;
-    this.readyState = 2;
-    var self = this;
-    var invoke = getInvoke();
-    invoke('gateway_ws_close')
-      .catch(function () {})
-      .finally(function () {
-        self.readyState = 3;
-        if (self.onclose) self.onclose({ code: 1000, reason: 'client close' });
-        self._cleanup();
-      });
+  PoseidonWebSocket.prototype._fail = function (msg) {
+    this.readyState = PoseidonWebSocket.CLOSED;
+    var err = { type: 'error', message: msg, target: this };
+    if (this.onerror) this.onerror(err);
+    this._emit('error', err);
+    var cev = { type: 'close', code: 1006, reason: msg, wasClean: false, target: this };
+    if (this.onclose) this.onclose(cev);
+    this._emit('close', cev);
+    this._cleanup();
   };
 
-  PoseidonGatewaySocket.prototype._cleanup = function () {
-    (this._off || []).forEach(function (fn) {
-      try { if (typeof fn === 'function') fn(); } catch (_) {}
+  PoseidonWebSocket.prototype._cleanup = function () {
+    (this._offs || []).forEach(function (fn) {
+      try { if (typeof fn === 'function') fn(); } catch (e) {}
     });
-    this._off = [];
+    this._offs = [];
   };
 
-  window.PoseidonGatewaySocket = PoseidonGatewaySocket;
-  window.__POSEIDON_SOCKET_FACTORY__ = function () {
-    return PoseidonGatewaySocket.connect();
+  PoseidonWebSocket.prototype.send = function (data) {
+    if (this.readyState !== PoseidonWebSocket.OPEN) {
+      throw new Error('InvalidStateError: still in CONNECTING state');
+    }
+    var invoke = getInvoke();
+    var text = typeof data === 'string' ? data : String(data);
+    invoke('gateway_ws_send', { id: this._id, text: text }).catch(function (err) {
+      console.error('[PoseidonWebSocket] send', err);
+    });
   };
 
-  // Install hermesDesktop P0
-  var invoke = getInvoke();
-  if (!invoke) {
-    console.warn('[Poseidon] bootstrap: no invoke yet');
-    return;
+  PoseidonWebSocket.prototype.close = function (code, reason) {
+    if (this.readyState === PoseidonWebSocket.CLOSED || this.readyState === PoseidonWebSocket.CLOSING) return;
+    this.readyState = PoseidonWebSocket.CLOSING;
+    var invoke = getInvoke();
+    invoke('gateway_ws_close', {
+      id: this._id,
+      code: code != null ? code : 1000,
+      reason: reason || ''
+    }).catch(function () {});
+  };
+
+  PoseidonWebSocket.prototype.addEventListener = function (type, fn) {
+    if (!this._listeners[type]) this._listeners[type] = [];
+    this._listeners[type].push(fn);
+  };
+  PoseidonWebSocket.prototype.removeEventListener = function (type, fn) {
+    if (!this._listeners[type]) return;
+    this._listeners[type] = this._listeners[type].filter(function (f) { return f !== fn; });
+  };
+  PoseidonWebSocket.prototype.dispatchEvent = function () { return true; };
+
+  // Install shim
+  window.WebSocket = PoseidonWebSocket;
+  window.PoseidonWebSocket = PoseidonWebSocket;
+  window.__POSEIDON_NATIVE_WS__ = NativeWebSocket;
+
+  // --- hermesDesktop recursive Proxy ---
+  function getInvokeSafe() {
+    return getInvoke();
   }
 
-  var BOOL_FLAGS = {
-    glassSupported: true,
-    translucencySupported: true,
-    localModelsEnabled: true,
-    assumeFreshInstall: true
-  };
-
-  function stub(path, name) {
-    if (/^on[A-Z]/.test(name)) {
-      return function () {
-        return function () {};
-      };
-    }
-    return function () {
-      console.warn('[Poseidon stub]', path);
-      return Promise.resolve(null);
-    };
-  }
-
-  var api = {
-    windowControls: {
-      custom: true,
-      minimize: function () { invoke('window_minimize'); },
-      toggleMaximize: function () { invoke('window_maximize'); },
-      close: function () { invoke('window_close'); }
-    },
-    getVersion: function () {
-      return invoke('get_version').then(function (v) { return String(v || '0.1.0'); });
-    },
-    getGatewayWsUrl: function () {
-      return invoke('get_gateway_ws_url');
-    },
-    getConnection: function () {
-      return invoke('get_connection');
-    },
-    getConnectionFor: function () {
-      return invoke('get_connection');
-    },
-    setActiveConnectionRoute: function (route) {
-      return invoke('set_active_connection_route', { route: route || {} });
-    },
-    getBootProgress: function () {
-      return invoke('get_boot_progress');
-    },
-    openExternal: function (url) {
-      return invoke('open_external', { url: url });
-    },
-    glassSupported: false,
-    translucencySupported: false,
-    localModelsEnabled: false,
-    assumeFreshInstall: false,
-    __poseidon: {
-      getSystemInfo: function () { return invoke('get_system_info'); },
-      gatewayStart: function () { return invoke('gateway_start'); },
-      gatewayStop: function () { return invoke('gateway_stop'); },
-      gatewayStatus: function () { return invoke('gateway_status'); },
-      gatewayEnsure: function () { return invoke('gateway_ensure'); },
-      wsConnect: function () { return invoke('gateway_ws_connect'); },
-      wsSend: function (text) { return invoke('gateway_ws_send', { text: text }); },
-      wsClose: function () { return invoke('gateway_ws_close'); }
-    }
-  };
-
-  var seen = {};
-  window.hermesDesktop = new Proxy(api, {
-    get: function (t, prop) {
-      if (prop in t) return t[prop];
-      var p = String(prop);
-      if (BOOL_FLAGS[p]) {
-        if (!seen[p]) { seen[p] = 1; console.warn('[Poseidon stub bool]', p); }
-        return false;
+  function recursiveStub(path) {
+    return new Proxy(function () {}, {
+      get: function (_t, prop) {
+        if (prop === 'then') return undefined;
+        if (typeof prop === 'symbol') return undefined;
+        if (prop === 'toJSON' || prop === 'toString') return function () { return '[PoseidonStub ' + path + ']'; };
+        var p = path + '.' + String(prop);
+        if (/^on[A-Z]/.test(String(prop))) {
+          return function () { return function () {}; };
+        }
+        return recursiveStub(p);
+      },
+      apply: function (_t, _this, args) {
+        var inv = getInvokeSafe();
+        console.warn('[Poseidon stub call]', path, args && args.length);
+        if (inv) {
+          inv('append_ui_log', { line: 'stub:' + path }).catch(function () {});
+        }
+        return Promise.resolve(null);
       }
-      if (!seen[p]) { seen[p] = 1; console.warn('[Poseidon stub missing]', p); }
-      return stub(p, p);
-    },
-    has: function () { return true; }
-  });
+    });
+  }
 
-  console.log('[Poseidon] bootstrap ready — hermesDesktop + PoseidonGatewaySocket');
+  function installHermesDesktop() {
+    var invoke = getInvokeSafe();
+    if (!invoke) {
+      console.warn('[Poseidon] hermesDesktop deferred — no invoke yet');
+      return;
+    }
+
+    var api = {
+      windowControls: {
+        custom: true,
+        minimize: function () { invoke('window_minimize'); },
+        toggleMaximize: function () { invoke('window_maximize'); },
+        close: function () { invoke('window_close'); }
+      },
+      getVersion: function () {
+        return invoke('get_version').then(function (v) { return String(v || '0.1.0'); });
+      },
+      getGatewayWsUrl: function () { return invoke('get_gateway_ws_url'); },
+      getConnection: function () { return invoke('get_connection'); },
+      getConnectionFor: function () { return invoke('get_connection'); },
+      setActiveConnectionRoute: function (route) {
+        return invoke('set_active_connection_route', { route: route || {} });
+      },
+      getBootProgress: function () { return invoke('get_boot_progress'); },
+      openExternal: function (url) { return invoke('open_external', { url: url }); },
+      glassSupported: false,
+      translucencySupported: false,
+      localModelsEnabled: false,
+      assumeFreshInstall: false
+    };
+
+    window.hermesDesktop = new Proxy(api, {
+      get: function (t, prop) {
+        if (prop in t) return t[prop];
+        var name = String(prop);
+        if (name === 'then') return undefined;
+        if (/^on[A-Z]/.test(name)) {
+          return function () { return function () {}; };
+        }
+        return recursiveStub(name);
+      },
+      has: function () { return true; }
+    });
+
+    console.log('[Poseidon] bootstrap: WebSocket shim + hermesDesktop ready');
+    try {
+      invoke('append_ui_log', { line: 'bootstrap ok hermesDesktop+WebSocketShim' }).catch(function () {});
+    } catch (e) {}
+  }
+
+  installHermesDesktop();
+  // Retry if __TAURI__ appears slightly later
+  var tries = 0;
+  var iv = setInterval(function () {
+    tries++;
+    if (window.hermesDesktop && window.hermesDesktop.getVersion) {
+      clearInterval(iv);
+      return;
+    }
+    installHermesDesktop();
+    if (tries > 20) clearInterval(iv);
+  }, 100);
 })();

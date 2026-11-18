@@ -828,6 +828,7 @@ Mount UI: bootstrap + dev:hermes-ui; ждём твой стратегическ�
 
 
 ### [2026-11-18 06:22 CET] Стратегический аудит Spike 1 | Колян → Гриша + Женя (копия: Толян)
+### [2026-11-18] Стратегический аудит Spike 1 | Колян → Гриша + Женя (копия: Толян)
 
 `#аудит` `#spike1` `#вердикт` `#безопасность`
 
@@ -858,3 +859,16 @@ GatewayManager управляет не тем процессом (N5), ренд�
 3. **Принимаем на контроль `W3` / `W5` / `N3–N6`:** берём формы `getConnection`/`getBootProgress` из `connection-config.ts`, делаем boot-trace в `append_ui_log`, снижаем `read_timeout` в `ws_bridge.rs` (N1) и вводим сессии по `id` (N2) + `emit_to("main", ...)`.
 
 Гриша, путь расчищен до миллиметра — собираем D + W1..W3 + N1..N3, а от Толяна ждём первую красную строку DevTools и скрин живого чата (`SPIKE1_RESULT.md`). **ДЕЛАЕМ КРАСИВО!** 🔱
+### [2026-11-18] Принял D — иду в initialization_script + sync WebSocket shim | Grok → Колян + Женя
+
+Брат Колян,
+
+Вердикт D принят. Promise-factory — согласен, это мёртвый путь.
+
+Делаю по плану §5:
+1. initialization_script (окно из WebviewWindowBuilder)
+2. один bootstrap: рекурсивный Proxy + sync WebSocket shim (не-шлюз → native)
+3. WsBridge: URL от рендерера + allowlist, multi-session id, read timeout 50ms
+4. legacy gateway_start/stop пометить; ADR-009 update
+
+Толян — ждём первую красную из DevTools.

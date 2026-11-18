@@ -2,7 +2,7 @@
 
 use crate::gateway::{GatewayManager, GatewayStatus};
 use crate::connection_state::{ActiveRoute, BootProgress, ConnectionInfo, ConnectionState};
-use crate::ws_bridge::{WsBridge, WsStatus};
+use crate::ws_bridge::{WsBridge, WsOpenArgs, WsStatusEvent};
 
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -517,16 +517,21 @@ pub async fn probe_gateway_ws() -> Result<String, String> {
 }
 
 // ---------------------------------------------------------------------------
-// ADR-015 Gateway WS session (Rust-owned)
+// ADR-015 / Kolyan D — multi-session WS (URL from renderer)
 // ---------------------------------------------------------------------------
 
+
 #[tauri::command]
-pub async fn gateway_ws_connect(
+pub async fn gateway_ws_open(
     app: AppHandle,
     bridge: State<'_, Arc<WsBridge>>,
-) -> Result<WsStatus, String> {
+    id: String,
+    url: String,
+    protocols: Option<Vec<String>>,
+) -> Result<(), String> {
     let bridge = Arc::clone(&bridge);
-    tauri::async_runtime::spawn_blocking(move || bridge.connect(app))
+    let args = WsOpenArgs { id, url, protocols };
+    tauri::async_runtime::spawn_blocking(move || bridge.open(app, args))
         .await
         .map_err(|e| e.to_string())?
 }
@@ -535,82 +540,94 @@ pub async fn gateway_ws_connect(
 pub async fn gateway_ws_send(
     bridge: State<'_, Arc<WsBridge>>,
     text: String,
+    id: Option<String>,
 ) -> Result<(), String> {
-    bridge.send_text(text)
+    let id = id.unwrap_or_else(|| "default".into());
+    bridge.send(&id, text)
 }
 
 #[tauri::command]
 pub async fn gateway_ws_close(
     bridge: State<'_, Arc<WsBridge>>,
-) -> Result<WsStatus, String> {
-    bridge.close()
+    id: Option<String>,
+    code: Option<u16>,
+    reason: Option<String>,
+) -> Result<WsStatusEvent, String> {
+    let id = id.unwrap_or_else(|| "default".into());
+    let _ = code;
+    let _ = reason;
+    bridge.close_id(&id)?;
+    Ok(WsStatusEvent {
+        id,
+        connected: false,
+        message: Some("disconnect requested".into()),
+        protocol: None,
+        code: Some(1000),
+        was_clean: Some(true),
+    })
+}
+
+/// Legacy single-session connect (mint URL in Rust) — kept for Probe button.
+#[tauri::command]
+pub async fn gateway_ws_connect(
+    app: AppHandle,
+    bridge: State<'_, Arc<WsBridge>>,
+) -> Result<WsStatusEvent, String> {
+    #[cfg(unix)]
+    {
+        let full = crate::local_gateway::mint_local_ws_url()?;
+        // Parse ticket into protocols
+        let ticket = full
+            .split("ticket=")
+            .nth(1)
+            .and_then(|s| s.split('&').next())
+            .ok_or_else(|| "no ticket in minted url".to_string())?;
+        let dial = full.split("&ticket=").next().unwrap_or(&full).to_string();
+        let dial = dial.split("?ticket=").next().unwrap_or(&dial).to_string();
+        let id = "legacy-connect".to_string();
+        let bridge = Arc::clone(&bridge);
+        let args = WsOpenArgs {
+            id: id.clone(),
+            url: if dial.contains("native_dial") {
+                dial
+            } else {
+                full.clone()
+            },
+            protocols: Some(vec![
+                "hermes-gateway-v1".into(),
+                format!("hermes-gateway-ticket.{}", ticket),
+            ]),
+        };
+        tauri::async_runtime::spawn_blocking(move || bridge.open(app, args))
+            .await
+            .map_err(|e| e.to_string())??;
+        Ok(WsStatusEvent {
+            id,
+            connected: true,
+            message: Some("legacy connect started".into()),
+            protocol: Some("hermes-gateway-v1".into()),
+            code: None,
+            was_clean: None,
+        })
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (app, bridge);
+        Err("unix only".into())
+    }
 }
 
 #[tauri::command]
 pub async fn gateway_ws_status(
     bridge: State<'_, Arc<WsBridge>>,
-) -> Result<WsStatus, String> {
-    Ok(WsStatus {
-        connected: bridge.is_connected(),
-        message: None,
+) -> Result<WsStatusEvent, String> {
+    let _ = bridge;
+    Ok(WsStatusEvent {
+        id: "n/a".into(),
+        connected: false,
+        message: Some("use per-session events".into()),
+        protocol: None,
+        code: None,
+        was_clean: None,
     })
-}
-
-// ---------------------------------------------------------------------------
-// UI log file (so cathedral can share logs without copy-paste)
-// ---------------------------------------------------------------------------
-
-fn ui_log_path() -> std::path::PathBuf {
-    // 1) POSEIDON_ROOT  2) walk up for package.json+src-tauri  3) ~/.poseidon/logs
-    if let Ok(root) = std::env::var("POSEIDON_ROOT") {
-        let p = std::path::PathBuf::from(root).join("logs");
-        return p.join("poseidon-ui.log");
-    }
-    let cwd = std::env::current_dir().unwrap_or_default();
-    let mut dir = cwd.clone();
-    for _ in 0..6 {
-        if dir.join("package.json").exists() && dir.join("src-tauri").exists() {
-            return dir.join("logs").join("poseidon-ui.log");
-        }
-        if !dir.pop() {
-            break;
-        }
-    }
-    dirs::home_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join(".poseidon")
-        .join("logs")
-        .join("poseidon-ui.log")
-}
-
-/// Append one line to logs/poseidon-ui.log (creates parent dirs).
-#[tauri::command]
-pub async fn append_ui_log(line: String) -> Result<String, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        use std::io::Write;
-        let path = ui_log_path();
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("mkdir {:?}: {}", parent, e))?;
-        }
-        let ts = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let mut f = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)
-            .map_err(|e| format!("open {:?}: {}", path, e))?;
-        writeln!(f, "[{}] {}", ts, line).map_err(|e| format!("write: {}", e))?;
-        Ok(path.to_string_lossy().to_string())
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
-/// Return path to the UI log file (for display).
-#[tauri::command]
-pub fn get_ui_log_path() -> String {
-    ui_log_path().to_string_lossy().to_string()
 }

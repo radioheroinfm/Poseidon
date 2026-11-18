@@ -116,3 +116,14 @@ Electron strips Origin in main; Tauri WebView cannot.
 Renderer uses a thin adapter over `invoke`/`listen` (Variant A from audit #8).  
 Tickets never need to leave Rust for the primary path.  
 `probe_gateway_ws` is the reference dial implementation.
+
+## ADR-016: Global WebSocket shim (Kolyan D)
+**Status**: Accepted  
+**Date**: 2026-11-18
+
+Upstream `socketFactory` is **synchronous** and falls back to `new WebSocket`.  
+Poseidon installs a global `WebSocket` shim via `initialization_script` before page JS:
+- Gateway URLs (`ws://127.0.0.1|localhost/api/ws`) → Rust multi-session bridge
+- All other URLs (Vite HMR, etc.) → native WebSocket
+
+No upstream patch required for dist or Vite.

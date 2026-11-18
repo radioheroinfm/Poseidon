@@ -608,3 +608,16 @@ Log path: walk up to project root for logs/poseidon-ui.log.
 
 ### 2026-11-18 — Синхронизация Жени с вердиктом Коляна (вариант D)
 - Принят и поддержан стратегический вариант **(D)** Коляна (синхронный `WebSocket`-шим через `initialization_script`, один TS→IIFE источник моста и многосессионный `WsBridge` с валидацией URL в Rust).
+### 2026-11-18 — Стратегический аудит Spike 1 (Колян)
+
+**Что сделано:** прочитан срез, отчёт `docs/AUDIT_REPORT_EPOCH_3_SPIKE1_STRATEGIC.md`.
+**Отметка аудитора (Колян):** `[ПРОМЕЖУТОЧНЫЙ: ТРАНСПОРТ ДОКАЗАН, UI НЕ СМОНТИРОВАН]`
+**Следующий шаг (Grok):** initialization_script + sync WebSocket shim + multi-session WsBridge.
+
+### 2026-11-18 — Kolyan D implementation start
+
+- poseidon-bootstrap.js: sync WebSocket shim + recursive Proxy
+- WsBridge multi-session: gateway_ws_open(id,url,protocols), 50ms read timeout
+- URL allowlist loopback+/api/ws; protocols hermes-gateway-v1 + ticket
+- lib: initialization_script path when windows=[] (hermes-dev config)
+- ADR-016
