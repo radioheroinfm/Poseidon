@@ -14,10 +14,31 @@ use gateway::GatewayManager;
 use connection_state::ConnectionState;
 use ws_bridge::WsBridge;
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::{Manager, RunEvent};
-use tauri::webview::PageLoadEvent;
 
 const BOOTSTRAP_JS: &str = include_str!("../../src/desktop-bridge/poseidon-bootstrap.js");
+
+const BANNER_JS: &str = r#"(function(){
+  if (document.getElementById('poseidon-boot-banner')) return;
+  var b=document.createElement('div');
+  b.id='poseidon-boot-banner';
+  b.textContent='Poseidon bootstrap OK — hermesDesktop=' + !!window.hermesDesktop;
+  b.style.cssText='position:fixed;z-index:2147483647;left:8px;bottom:8px;padding:6px 10px;background:#0e7499;color:#fff;font:12px monospace;border-radius:6px;opacity:0.9;pointer-events:none';
+  (document.body||document.documentElement).appendChild(b);
+  setTimeout(function(){ try{b.remove();}catch(e){} }, 8000);
+})();"#;
+
+fn inject_bootstrap(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        if let Err(e) = w.eval(BOOTSTRAP_JS) {
+            log::warn!("bootstrap eval: {}", e);
+        } else {
+            log::info!("Poseidon bootstrap injected");
+        }
+        let _ = w.eval(BANNER_JS);
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -67,43 +88,23 @@ pub fn run() {
             );
 
             if let Some(w) = app.get_webview_window("main") {
-                // Re-inject after every full page load (Vite HMR / first navigation)
-                let w_for_load = w.clone();
-                let _ = w_for_load.on_page_load(move |window, payload| {
-                    match payload.event() {
-                        PageLoadEvent::Finished => {
-                            log::info!("page load finished — injecting bootstrap");
-                            if let Err(e) = window.eval(BOOTSTRAP_JS) {
-                                log::warn!("bootstrap eval: {}", e);
-                            }
-                            // Visible banner so white screen ≠ silent failure
-                            let _ = window.eval(
-                                r#"(function(){
-                                  if (document.getElementById('poseidon-boot-banner')) return;
-                                  var b=document.createElement('div');
-                                  b.id='poseidon-boot-banner';
-                                  b.textContent='Poseidon bootstrap OK — hermesDesktop=' + !!window.hermesDesktop;
-                                  b.style.cssText='position:fixed;z-index:2147483647;left:8px;bottom:8px;padding:6px 10px;background:#0e7499;color:#fff;font:12px monospace;border-radius:6px;opacity:0.9;pointer-events:none';
-                                  document.documentElement.appendChild(b);
-                                  setTimeout(function(){ try{b.remove();}catch(e){} }, 8000);
-                                })();"#
-                            );
-                        }
-                        _ => {}
-                    }
-                });
-
-                // First inject (may be early — page-load will repeat)
-                if let Err(e) = w.eval(BOOTSTRAP_JS) {
-                    log::warn!("early bootstrap eval: {}", e);
-                }
-
                 #[cfg(debug_assertions)]
                 {
                     w.open_devtools();
                     log::info!("devtools opened (debug build)");
                 }
             }
+
+            // Inject now + delayed retries (Vite page may not be ready at setup)
+            inject_bootstrap(app.handle());
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                for ms in [300_u64, 800, 1500, 3000] {
+                    std::thread::sleep(Duration::from_millis(ms));
+                    inject_bootstrap(&handle);
+                }
+            });
+
             Ok(())
         })
         .build(tauri::generate_context!())
