@@ -227,11 +227,14 @@
   function recursiveStub(path) {
     var defaultProfile = {
       id: "default",
-      name: "Default",
+      name: "default",
+      display_name: "Default",
       displayName: "Default",
       path: "",
       home: "",
-      kind: "local"
+      kind: "local",
+      is_default: true,
+      isDefault: true
     };
     return new Proxy(function () {}, {
       get: function (_t, prop) {
@@ -276,11 +279,14 @@
     // Safe default profile shape (strings only — upstream calls .trim())
     var defaultProfile = {
       id: "default",
-      name: "Default",
+      name: "default",
+      display_name: "Default",
       displayName: "Default",
       path: "",
       home: "",
-      kind: "local"
+      kind: "local",
+      is_default: true,
+      isDefault: true
     };
 
     var api = {
