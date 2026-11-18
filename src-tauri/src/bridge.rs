@@ -631,3 +631,70 @@ pub async fn gateway_ws_status(
         was_clean: None,
     })
 }
+
+// ---------------------------------------------------------------------------
+// UI log file
+// ---------------------------------------------------------------------------
+
+fn ui_log_path() -> std::path::PathBuf {
+    if let Ok(root) = std::env::var("POSEIDON_ROOT") {
+        return std::path::PathBuf::from(root).join("logs").join("poseidon-ui.log");
+    }
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let mut dir = cwd.clone();
+    for _ in 0..6 {
+        if dir.join("package.json").exists() && dir.join("src-tauri").exists() {
+            return dir.join("logs").join("poseidon-ui.log");
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    dirs::home_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join(".poseidon")
+        .join("logs")
+        .join("poseidon-ui.log")
+}
+
+#[tauri::command]
+pub async fn append_ui_log(line: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        use std::io::Write;
+        let path = ui_log_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("mkdir {:?}: {}", parent, e))?;
+        }
+        // Soft size cap ~2 MiB: truncate by renaming aside
+        if let Ok(meta) = std::fs::metadata(&path) {
+            if meta.len() > 2 * 1024 * 1024 {
+                let _ = std::fs::rename(&path, path.with_extension("log.old"));
+            }
+        }
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let mut f = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|e| format!("open {:?}: {}", path, e))?;
+        // Never log lines that look like tickets
+        let safe = if line.contains("ticket=") || line.contains("hermes-gateway-ticket.") {
+            "[redacted ticket-like line]".to_string()
+        } else {
+            line
+        };
+        writeln!(f, "[{}] {}", ts, safe).map_err(|e| format!("write: {}", e))?;
+        Ok(path.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub fn get_ui_log_path() -> String {
+    ui_log_path().to_string_lossy().to_string()
+}
