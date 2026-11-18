@@ -66,6 +66,10 @@
     console.warn("[Poseidon] storage sanitize", e);
   }
 
+
+  try {
+    document.documentElement.dataset.hermesDesktopHost = "tauri";
+  } catch (e) {}
 var NativeWebSocket = window.WebSocket;
 
   function getInvoke() {
