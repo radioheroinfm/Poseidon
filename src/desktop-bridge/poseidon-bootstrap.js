@@ -432,7 +432,8 @@ var NativeWebSocket = window.WebSocket;
       var bodyKids = document.body ? document.body.children.length : -1;
       var crash = document.querySelector("[class*='crash'], [class*='z-crash'], [data-testid*='crash']");
       var crashText = crash ? (crash.innerText || crash.textContent || "").trim().slice(0, 500) : "";
-      var msg = tag + " root=" + (root ? "yes" : "NO") +
+      var rootText = root ? (root.innerText || "").replace(/\s+/g, " ").trim().slice(0, 120) : "";
+      var msg = tag + " root=" + (root ? "yes" : "NO") + " text=[" + rootText + "] "+
         " bodyChildren=" + bodyKids + " title=" + document.title +
         (crashText ? (" CRASH=[" + crashText.replace(/\s+/g, " ") + "]") : " noCrashEl");
       console.log("[Poseidon]", msg);
@@ -446,4 +447,25 @@ var NativeWebSocket = window.WebSocket;
   setTimeout(function () { poseidonDomProbe("t+1s"); }, 1000);
   setTimeout(function () { poseidonDomProbe("t+3s"); }, 3000);
   setTimeout(function () { poseidonDomProbe("t+6s"); }, 6000);
+  setTimeout(function () { poseidonDomProbe("t+12s"); }, 12000);
+
+  function poseidonKickBoot() {
+    var inv = getInvoke();
+    if (!inv) return;
+    inv("get_connection").then(function (c) {
+      console.log("[Poseidon] get_connection", c);
+      poseidonShowError("get_connection: " + JSON.stringify(c).slice(0, 200));
+      inv("append_ui_log", { line: "get_connection " + JSON.stringify(c) }).catch(function () {});
+    }).catch(function (e) {
+      console.warn("[Poseidon] get_connection failed", e);
+      poseidonShowError("get_connection FAIL: " + e);
+    });
+    inv("get_boot_progress").then(function (b) {
+      console.log("[Poseidon] boot", b);
+      poseidonShowError("boot: " + JSON.stringify(b));
+    }).catch(function () {});
+  }
+  setTimeout(poseidonKickBoot, 500);
+  setTimeout(poseidonKickBoot, 2500);
+
 })();
