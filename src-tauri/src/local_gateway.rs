@@ -80,11 +80,30 @@ pub fn gateway_ensure_json() -> Result<EnsurePayload, String> {
     let home = hermes_home();
     info!("gateway ensure --json via {:?} HERMES_HOME={:?}", bin, home);
 
-    let output = Command::new(&bin)
-        .args(["gateway", "ensure", "--json"])
-        .env("HERMES_HOME", &home)
-        .output()
-        .map_err(|e| format!("spawn hermes gateway ensure: {}", e))?;
+    // Kolyan N4: timeout so hung ensure cannot block UI forever
+    let output = {
+        use std::sync::mpsc;
+        use std::time::Duration;
+        let (tx, rx) = mpsc::channel();
+        let bin_c = bin.clone();
+        let home_c = home.clone();
+        std::thread::spawn(move || {
+            let r = Command::new(&bin_c)
+                .args(["gateway", "ensure", "--json"])
+                .env("HERMES_HOME", &home_c)
+                .output();
+            let _ = tx.send(r);
+        });
+        match rx.recv_timeout(Duration::from_secs(45)) {
+            Ok(Ok(o)) => o,
+            Ok(Err(e)) => {
+                return Err(format!("spawn hermes gateway ensure: {}", e));
+            }
+            Err(_) => {
+                return Err("hermes gateway ensure --json timed out after 45s".into());
+            }
+        }
+    };
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

@@ -373,6 +373,20 @@ var NativeWebSocket = window.WebSocket;
       translucencySupported: false,
       localModelsEnabled: false,
       assumeFreshInstall: false,
+      // Native desktop APIs Hermes calls during boot (must resolve, not Proxy)
+      getOnBattery: function () { return Promise.resolve(false); },
+      setTranslucency: function () { return Promise.resolve(); },
+      setKeepAwake: function () { return Promise.resolve(); },
+      setTitleBarTheme: function () { return Promise.resolve(); },
+      setNativeTheme: function () { return Promise.resolve(); },
+      setActiveWork: function () { return Promise.resolve(); },
+      desktopPluginsRoot: function () { return Promise.resolve(""); },
+      readDir: function () { return Promise.resolve([]); },
+      watchDirectory: function () {
+        return Promise.resolve(function unwatch() {});
+      },
+      api: function () { return Promise.resolve(null); },
+assumeFreshInstall: false,
       // Skin/profile boot keys must be plain strings (themes/context BOOT_PROFILE_KEY)
       getLastProfile: function () { return Promise.resolve("default"); },
       getActiveProfile: function () { return Promise.resolve("default"); },
