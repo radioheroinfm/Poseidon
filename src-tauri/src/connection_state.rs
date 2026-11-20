@@ -102,11 +102,33 @@ impl ConnectionState {
     }
 
     pub fn get_boot(&self) -> BootProgress {
+        // If connection already ready, never report a stale in-flight "ensure"
+        if let Ok(last) = self.last.lock() {
+            if last.state == "ready" {
+                return BootProgress {
+                    phase: "ready".into(),
+                    ready: true,
+                    detail: last.api_origin.clone(),
+                    percent: Some(100),
+                };
+            }
+        }
         self.boot.lock().map(|g| g.clone()).unwrap_or(BootProgress {
             phase: "unknown".into(),
             ready: false,
             detail: None,
             percent: None,
+        })
+    }
+
+    /// Return cached ready connection if any (skip re-ensure).
+    pub fn ready_cached(&self) -> Option<ConnectionInfo> {
+        self.last.lock().ok().and_then(|g| {
+            if g.state == "ready" && g.api_origin.is_some() {
+                Some(g.clone())
+            } else {
+                None
+            }
         })
     }
 }

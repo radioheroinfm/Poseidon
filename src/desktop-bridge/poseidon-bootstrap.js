@@ -514,23 +514,22 @@ assumeFreshInstall: false,
   function poseidonKickBoot() {
     var inv = getInvoke();
     if (!inv) return;
+    // Sequence: connection → boot → wsUrl (avoid reading boot mid-ensure)
     inv("get_connection").then(function (c) {
       console.log("[Poseidon] get_connection", c);
       poseidonShowError("get_connection: " + JSON.stringify(c).slice(0, 200));
       inv("append_ui_log", { line: "get_connection " + JSON.stringify(c) }).catch(function () {});
-    }).catch(function (e) {
-      console.warn("[Poseidon] get_connection failed", e);
-      poseidonShowError("get_connection FAIL: " + e);
-    });
-    inv("get_boot_progress").then(function (b) {
+      return inv("get_boot_progress");
+    }).then(function (b) {
       console.log("[Poseidon] boot", b);
       poseidonShowError("boot: " + JSON.stringify(b));
-    }).catch(function () {});
-    inv("get_gateway_ws_url").then(function (u) {
+      return inv("get_gateway_ws_url");
+    }).then(function (u) {
       console.log("[Poseidon] get_gateway_ws_url", u);
       poseidonShowError("wsUrl: " + JSON.stringify(u).slice(0, 180));
     }).catch(function (e) {
-      poseidonShowError("wsUrl FAIL: " + e);
+      console.warn("[Poseidon] kick failed", e);
+      poseidonShowError("kick FAIL: " + e);
     });
   }
   setTimeout(poseidonKickBoot, 500);

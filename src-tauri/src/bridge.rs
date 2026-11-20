@@ -398,6 +398,11 @@ pub async fn get_connection(
     tauri::async_runtime::spawn_blocking(move || {
         #[cfg(unix)]
         {
+            // Single-flight friendly: reuse ready cache (avoids boot flicker + double ensure)
+            if let Some(cached) = conn.ready_cached() {
+                log::info!("get_connection: cache hit ready api_origin={:?}", cached.api_origin);
+                return Ok(cached);
+            }
             conn.set_boot(BootProgress {
                 phase: "ensure".into(),
                 ready: false,
@@ -441,7 +446,7 @@ pub async fn get_connection(
                         phase: if info.state == "ready" { "ready".into() } else { "ensure".into() },
                         ready: info.state == "ready",
                         detail: info.api_origin.clone().or(Some("ensure done".into())),
-                        percent: Some(if info.state == "ready" { 90 } else { 40 }),
+                        percent: Some(if info.state == "ready" { 100 } else { 40 }),
                     });
                     Ok(info)
                 }
