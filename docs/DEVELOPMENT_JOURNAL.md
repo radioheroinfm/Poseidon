@@ -628,3 +628,10 @@ Log path: walk up to project root for logs/poseidon-ui.log.
 - WebKitWebProcess crash on Linux (recurring)
 - hostHas native path OK when isBrowserHostedDesktop=false
 - Next: Chrome vs Tauri compare; HermesConnection shape; boot ready; SPIKE1_NEXT.md
+
+### 2026-11-20 — kolyan-patch-01 merged
+
+- Bootstrap: sync WS shim, recursive stub + TRACE, net/error logging
+- WsBridge: multi-session, 25ms poll, allow_port, unit tests (cargo on cathedral)
+- node --test scripts/test-bootstrap.mjs → 11/11
+- Preserved: connection ready cache, localSkin null, ensure timeout

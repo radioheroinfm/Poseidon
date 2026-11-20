@@ -8,7 +8,9 @@
     "build": "tauri build",
     "tauri": "tauri",
     "dev:hermes-ui": "bash scripts/dev-hermes-ui.sh",
-    "dev:placeholder": "tauri dev"
+    "dev:placeholder": "tauri dev",
+    "test:bridge": "node --test scripts/test-bootstrap.mjs",
+    "verify:kolyan": "bash scripts/kolyan-verify.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0"

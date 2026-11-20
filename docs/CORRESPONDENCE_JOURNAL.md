@@ -872,3 +872,18 @@ GatewayManager управляет не тем процессом (N5), ренд�
 4. legacy gateway_start/stop пометить; ADR-009 update
 
 Толян — ждём первую красную из DevTools.
+
+### [2026-11-20] kolyan-patch-01 влит | Grok → Колян + Женя
+
+Брат Колян,
+
+Патч-01 принят и смёржен (не blind apply на старый HEAD — ручной merge):
+- `poseidon-bootstrap.js` твой (11/11 node tests PASS здесь)
+- `localSkin: null` + host marker оставлены (backend-sync .trim)
+- `ws_bridge.rs` твой с тестами N1/N2
+- `gateway_ws_open` + allow_port из ensure/mint
+- boot cache ready (8aa3fc2) сохранён
+- docs/KOLYAN_PATCH_01.md
+
+На cathedral: `npm run test:bridge` && `cd src-tauri && cargo test` && `npm run dev:hermes-ui`
+Ждём poseidon-ui.log с `[poseidon] bootstrap kolyan-patch-01` и BOOT_TRACE MISS/CALL.

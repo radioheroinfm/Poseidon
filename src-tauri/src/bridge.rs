@@ -2,7 +2,7 @@
 
 use crate::gateway::{GatewayManager, GatewayStatus};
 use crate::connection_state::{ActiveRoute, BootProgress, ConnectionInfo, ConnectionState};
-use crate::ws_bridge::{WsBridge, WsOpenArgs, WsStatusEvent};
+use crate::ws_bridge::{Emit, WsBridge, WsEvent, WsStatus, LEGACY_ID};
 
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -13,7 +13,7 @@ pub struct GatewayWsUrlResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use serde::Serialize;
 use std::sync::Arc;
@@ -317,16 +317,23 @@ mod tests {
 #[tauri::command]
 pub async fn get_gateway_ws_url(
     _state: State<'_, Arc<GatewayManager>>,
+    bridge: State<'_, Arc<WsBridge>>,
 ) -> Result<GatewayWsUrlResult, String> {
-    tauri::async_runtime::spawn_blocking(|| {
+    let bridge = Arc::clone(&bridge);
+    tauri::async_runtime::spawn_blocking(move || {
         #[cfg(unix)]
         {
             match crate::local_gateway::mint_local_ws_url() {
-                Ok(ws_url) => Ok(GatewayWsUrlResult {
-                    ok: true,
-                    ws_url: Some(ws_url),
-                    error: None,
-                }),
+                Ok(ws_url) => {
+                    if let Some(port) = crate::ws_bridge::ws_url_port(&ws_url) {
+                        bridge.allow_port(port);
+                    }
+                    Ok(GatewayWsUrlResult {
+                        ok: true,
+                        ws_url: Some(ws_url),
+                        error: None,
+                    })
+                }
                 Err(e) => {
                     log::warn!("mint_local_ws_url: {}", e);
                     Ok(GatewayWsUrlResult {
@@ -393,8 +400,10 @@ pub async fn gateway_ensure(
 #[tauri::command]
 pub async fn get_connection(
     conn: State<'_, Arc<ConnectionState>>,
+    bridge: State<'_, Arc<WsBridge>>,
 ) -> Result<ConnectionInfo, String> {
     let conn = Arc::clone(&conn);
+    let bridge = Arc::clone(&bridge);
     tauri::async_runtime::spawn_blocking(move || {
         #[cfg(unix)]
         {
@@ -442,6 +451,11 @@ pub async fn get_connection(
                         message: payload.detail.map(|d| d.to_string()),
                     };
                     conn.set_last(info.clone());
+                    if let Some(ref origin) = info.api_origin {
+                        if let Some(port) = origin.rsplit(':').next().and_then(|s| s.parse::<u16>().ok()) {
+                            bridge.allow_port(port);
+                        }
+                    }
                     conn.set_boot(BootProgress {
                         phase: if info.state == "ready" { "ready".into() } else { "ensure".into() },
                         ready: info.state == "ready",
@@ -522,10 +536,47 @@ pub async fn probe_gateway_ws() -> Result<String, String> {
     .map_err(|e| e.to_string())?
 }
 
+
+
 // ---------------------------------------------------------------------------
-// ADR-015 / Kolyan D — multi-session WS (URL from renderer)
+// ADR-015 / Kolyan patch-01 — multi-session WS (URL from renderer)
 // ---------------------------------------------------------------------------
 
+fn make_emitter(app: AppHandle) -> Emit {
+    Arc::new(move |ev: WsEvent| {
+        match ev {
+            WsEvent::Frame { id, data } => {
+                let _ = app.emit(
+                    "gateway-ws-session-frame",
+                    serde_json::json!({ "id": id, "data": data }),
+                );
+                // legacy alias for placeholder smoke
+                let _ = app.emit("gateway-ws-frame", data);
+            }
+            WsEvent::Status {
+                id,
+                connected,
+                message,
+            } => {
+                let _ = app.emit(
+                    "gateway-ws-session-status",
+                    serde_json::json!({
+                        "id": id,
+                        "connected": connected,
+                        "message": message,
+                    }),
+                );
+                let _ = app.emit(
+                    "gateway-ws-status",
+                    WsStatus {
+                        connected,
+                        message,
+                    },
+                );
+            }
+        }
+    })
+}
 
 #[tauri::command]
 pub async fn gateway_ws_open(
@@ -534,12 +585,14 @@ pub async fn gateway_ws_open(
     id: String,
     url: String,
     protocols: Option<Vec<String>>,
-) -> Result<(), String> {
+) -> Result<WsStatus, String> {
+    let protocols = protocols.unwrap_or_default();
     let bridge = Arc::clone(&bridge);
-    let args = WsOpenArgs { id, url, protocols };
-    tauri::async_runtime::spawn_blocking(move || bridge.open(app, args))
-        .await
-        .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || {
+        bridge.open(make_emitter(app), &id, &url, &protocols)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -548,8 +601,8 @@ pub async fn gateway_ws_send(
     text: String,
     id: Option<String>,
 ) -> Result<(), String> {
-    let id = id.unwrap_or_else(|| "default".into());
-    bridge.send(&id, text)
+    let id = id.unwrap_or_else(|| LEGACY_ID.to_string());
+    bridge.send_to(&id, text)
 }
 
 #[tauri::command]
@@ -558,85 +611,56 @@ pub async fn gateway_ws_close(
     id: Option<String>,
     code: Option<u16>,
     reason: Option<String>,
-) -> Result<WsStatusEvent, String> {
-    let id = id.unwrap_or_else(|| "default".into());
-    let _ = code;
-    let _ = reason;
-    bridge.close_id(&id)?;
-    Ok(WsStatusEvent {
-        id,
-        connected: false,
-        message: Some("disconnect requested".into()),
-        protocol: None,
-        code: Some(1000),
-        was_clean: Some(true),
-    })
+) -> Result<WsStatus, String> {
+    let _ = (code, reason);
+    let id = id.unwrap_or_else(|| LEGACY_ID.to_string());
+    bridge.close_id(&id)
 }
 
-/// Legacy single-session connect (mint URL in Rust) — kept for Probe button.
 #[tauri::command]
 pub async fn gateway_ws_connect(
     app: AppHandle,
     bridge: State<'_, Arc<WsBridge>>,
-) -> Result<WsStatusEvent, String> {
-    #[cfg(unix)]
-    {
-        let full = crate::local_gateway::mint_local_ws_url()?;
-        // Parse ticket into protocols
-        let ticket = full
-            .split("ticket=")
-            .nth(1)
-            .and_then(|s| s.split('&').next())
-            .ok_or_else(|| "no ticket in minted url".to_string())?;
-        let dial = full.split("&ticket=").next().unwrap_or(&full).to_string();
-        let dial = dial.split("?ticket=").next().unwrap_or(&dial).to_string();
-        let id = "legacy-connect".to_string();
-        let bridge = Arc::clone(&bridge);
-        let args = WsOpenArgs {
-            id: id.clone(),
-            url: if dial.contains("native_dial") {
-                dial
-            } else {
-                full.clone()
-            },
-            protocols: Some(vec![
-                "hermes-gateway-v1".into(),
+) -> Result<WsStatus, String> {
+    let bridge = Arc::clone(&bridge);
+    tauri::async_runtime::spawn_blocking(move || -> Result<WsStatus, String> {
+        #[cfg(unix)]
+        {
+            let full = crate::local_gateway::mint_local_ws_url()?;
+            let (dial_url, ticket) = crate::ws_bridge::parse_ticket_url(&full)?;
+            if let Some(port) = crate::ws_bridge::ws_url_port(&dial_url) {
+                bridge.allow_port(port);
+            }
+            let protocols = vec![
+                "hermes-gateway-v1".to_string(),
                 format!("hermes-gateway-ticket.{}", ticket),
-            ]),
-        };
-        tauri::async_runtime::spawn_blocking(move || bridge.open(app, args))
-            .await
-            .map_err(|e| e.to_string())??;
-        Ok(WsStatusEvent {
-            id,
-            connected: true,
-            message: Some("legacy connect started".into()),
-            protocol: Some("hermes-gateway-v1".into()),
-            code: None,
-            was_clean: None,
-        })
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = (app, bridge);
-        Err("unix only".into())
-    }
+            ];
+            bridge.open(make_emitter(app), LEGACY_ID, &dial_url, &protocols)
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = (&app, &bridge);
+            Err("ws_bridge legacy connect is unix-only for now".to_string())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 pub async fn gateway_ws_status(
     bridge: State<'_, Arc<WsBridge>>,
-) -> Result<WsStatusEvent, String> {
-    let _ = bridge;
-    Ok(WsStatusEvent {
-        id: "n/a".into(),
-        connected: false,
-        message: Some("use per-session events".into()),
-        protocol: None,
-        code: None,
-        was_clean: None,
+) -> Result<WsStatus, String> {
+    Ok(WsStatus {
+        connected: bridge.is_connected(),
+        message: Some(if bridge.is_connected() {
+            "legacy session open".into()
+        } else {
+            "no legacy session".into()
+        }),
     })
 }
+
 
 // ---------------------------------------------------------------------------
 // UI log file

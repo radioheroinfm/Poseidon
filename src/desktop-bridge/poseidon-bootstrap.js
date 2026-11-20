@@ -1,538 +1,500 @@
 /**
- * Poseidon initialization_script (Kolyan D)
- * - Runs BEFORE page scripts
- * - Sync WebSocket shim for gateway URLs; native for Vite HMR etc.
- * - Recursive hermesDesktop Proxy
+ * Poseidon bootstrap (kolyan-patch-01) — the ONLY implementation that runs in the WebView.
+ *
+ * Installed through Tauri's `initialization_script`, i.e. before any page script
+ * and again on every document load. Therefore:
+ *  - it never assumes `window.__TAURI__` exists yet: Tauri is resolved lazily;
+ *  - `window.hermesDesktop` is installed synchronously.
+ *
+ * Contents:
+ *  1. diagnostics: JS errors, console.error/warn and loopback fetch/XHR are written to
+ *     logs/poseidon-ui.log via `append_ui_log` (tickets are redacted);
+ *  2. `window.hermesDesktop`: implemented P0 keys + a RECURSIVE stub proxy
+ *     (`profile.getDefault()` etc. never throw "not a function"); every stub access is traced
+ *     as `[trace] MISS|CALL <path>` -> run once, get the real boot-key list (BOOT_TRACE);
+ *  3. a synchronous `WebSocket` shim: `new WebSocket("ws://127.0.0.1:<port>/api/ws", protocols)`
+ *     returns a WebSocket-like object at once and dials through Rust (`gateway_ws_open`),
+ *     because the browser's `Origin` header is rejected by the gateway (ADR-015).
+ *     Other URLs (e.g. Vite HMR) go to the native WebSocket untouched.
  */
 (function () {
+  'use strict';
   if (window.__POSEIDON_BOOTSTRAPPED__) return;
   window.__POSEIDON_BOOTSTRAPPED__ = true;
+  try { document.documentElement.dataset.hermesDesktopHost = "tauri"; } catch (e) {}
 
-  // Visible diagnostics on white screen
-  function poseidonShowError(msg) {
-    try {
-      var el = document.getElementById("poseidon-error-overlay");
-      if (!el) {
-        el = document.createElement("div");
-        el.id = "poseidon-error-overlay";
-        el.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;max-height:40vh;overflow:auto;background:rgba(10,10,18,0.92);color:#f8fafc;font:12px/1.4 ui-monospace,monospace;padding:10px 14px;white-space:pre-wrap;border-bottom:1px solid #334155;pointer-events:auto;";
-        (document.body || document.documentElement).appendChild(el);
-        var btn = document.createElement("button");
-        btn.id = "poseidon-banner-close";
-        btn.textContent = "Close window";
-        btn.style.cssText = "position:fixed;top:8px;right:12px;z-index:2147483647;padding:6px 12px;background:#b91c1c;color:#fff;border:0;border-radius:6px;font:12px sans-serif;cursor:pointer;pointer-events:auto;";
-        btn.onclick = function () {
-          var inv = getInvoke && getInvoke();
-          if (inv) inv("window_close");
-          else window.close();
-        };
-        (document.body || document.documentElement).appendChild(btn);
-      }
-      el.textContent = (el.textContent ? el.textContent + "\n\n" : "") + String(msg);
-    } catch (e) {}
+  var VERSION = 'kolyan-patch-01';
+
+  // ------------------------------------------------------------------ tauri (lazy)
+
+  function rawInvoke() {
+    var t = window.__TAURI_INTERNALS__;
+    if (t && typeof t.invoke === 'function') return t.invoke.bind(t);
+    var g = window.__TAURI__;
+    if (g && g.core && typeof g.core.invoke === 'function') return g.core.invoke.bind(g.core);
+    return null;
   }
-  window.addEventListener("error", function (ev) {
-    poseidonShowError("error: " + (ev.message || ev.error || ev));
-  });
-  window.addEventListener("unhandledrejection", function (ev) {
-    poseidonShowError("rejection: " + (ev.reason && (ev.reason.stack || ev.reason.message || ev.reason)));
-  });
 
-
-  
-  // Reset storage poisoned by stubs (once per tab)
-  try {
-    if (sessionStorage.getItem("POSEIDON_STORAGE_CLEANED")) {
-      /* already cleaned this tab */
-    } else {
-    sessionStorage.setItem("POSEIDON_STORAGE_CLEANED", "1");
-
-    ["hermes.desktop.profileColors", "hermes.desktop.showAllProfiles"].forEach(function (k) {
-      var v = localStorage.getItem(k);
-      if (v === "Default" || v === "default") {
-        console.warn("[Poseidon] removing poisoned storage", k, v);
-        localStorage.removeItem(k);
-      }
+  function ready(maxMs) {
+    var limit = typeof maxMs === 'number' ? maxMs : 20000;
+    return new Promise(function (resolve, reject) {
+      var waited = 0;
+      (function poll() {
+        if (rawInvoke()) return resolve();
+        if (waited >= limit) return reject(new Error('Poseidon: Tauri API not available'));
+        waited += 20;
+        setTimeout(poll, 20);
+      })();
     });
-    var keys = [];
-    for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
-    keys.forEach(function (k) {
-      if (!k) return;
-      var v = localStorage.getItem(k);
-      if (v === "Default") {
-        console.warn("[Poseidon] clearing Default poison", k);
-        localStorage.removeItem(k);
-      }
+  }
+
+  function invoke(cmd, args) {
+    return ready().then(function () {
+      return rawInvoke()(cmd, args);
     });
-    if (!localStorage.getItem("hermes-desktop-active-profile-v1")) {
-      localStorage.setItem("hermes-desktop-active-profile-v1", "default");
+  }
+
+  function listen(event, cb) {
+    var g = window.__TAURI__;
+    if (g && g.event && typeof g.event.listen === 'function') {
+      return g.event.listen(event, cb);
     }
-  }
-  } catch (e) {
-    console.warn("[Poseidon] storage sanitize", e);
+    var t = window.__TAURI_INTERNALS__;
+    if (t && typeof t.invoke === 'function' && typeof t.transformCallback === 'function') {
+      // same wire format as @tauri-apps/api event.listen
+      return t.invoke('plugin:event|listen', {
+        event: event,
+        target: { kind: 'Any' },
+        handler: t.transformCallback(cb)
+      });
+    }
+    return Promise.reject(new Error('Poseidon: no event API'));
   }
 
+  // ------------------------------------------------------------------ log
 
+  var MAX_LOG_LINES = 3000;
+  var logged = 0;
+  var logBuf = [];
+  var logTimer = null;
+  var flushTries = 0;
+
+  function redact(s) {
+    return String(s)
+      .replace(/ticket=[^&\s"']+/g, 'ticket=***')
+      .replace(/(hermes-gateway-ticket\.)[A-Za-z0-9_\-\.~]+/g, '$1***');
+  }
+
+  function plog(line) {
+    if (logged >= MAX_LOG_LINES) return;
+    logged++;
+    logBuf.push(redact(line).slice(0, 1500));
+    if (!logTimer) logTimer = setTimeout(flushLog, 400);
+  }
+
+  function flushLog() {
+    logTimer = null;
+    if (!logBuf.length) return;
+    var raw = rawInvoke();
+    if (!raw) {
+      if (++flushTries < 80) {
+        logTimer = setTimeout(flushLog, 500);
+        if (logTimer && typeof logTimer.unref === 'function') logTimer.unref(); // node tests only
+      }
+      return;
+    }
+    var lines = logBuf.splice(0, logBuf.length);
+    lines.forEach(function (l) {
+      try {
+        var p = raw('append_ui_log', { line: l });
+        if (p && typeof p.catch === 'function') p.catch(function () {});
+      } catch (e) { /* ignore */ }
+    });
+  }
+
+  var seenTrace = {};
+  function trace(kind, what) {
+    var k = kind + ' ' + what;
+    if (seenTrace[k]) return;
+    seenTrace[k] = 1;
+    plog('[trace] ' + k);
+  }
+
+  // errors -> log (this is the "first red line" without opening DevTools)
+  var errCount = 0;
   try {
-    document.documentElement.dataset.hermesDesktopHost = "tauri";
-  } catch (e) {}
-var NativeWebSocket = window.WebSocket;
+    window.addEventListener('error', function (ev) {
+      if (++errCount > 100) return;
+      var st = ev && ev.error && ev.error.stack ? ' | ' + String(ev.error.stack).split('\n').slice(0, 4).join(' <- ') : '';
+      plog('[js-error] ' + (ev && ev.message) + ' @' + (ev && ev.filename) + ':' + (ev && ev.lineno) + st);
+    });
+    window.addEventListener('unhandledrejection', function (ev) {
+      if (++errCount > 100) return;
+      var r = ev && ev.reason;
+      plog('[js-unhandled-rejection] ' + (r && r.stack ? String(r.stack).split('\n').slice(0, 4).join(' <- ') : String(r)));
+    });
+  } catch (e) { /* no addEventListener (tests) */ }
 
-  function getInvoke() {
-    var g = window.__TAURI__;
-    if (g && g.core && g.core.invoke) return g.core.invoke.bind(g.core);
-    return null;
-  }
-  function getListen() {
-    var g = window.__TAURI__;
-    if (g && g.event && g.event.listen) return g.event.listen.bind(g.event);
-    return null;
-  }
-
-  function isGatewayWsUrl(url) {
+  var consoleCount = 0;
+  ['error', 'warn'].forEach(function (lvl) {
     try {
-      var u = new URL(url, location.href);
-      if (u.protocol !== 'ws:' && u.protocol !== 'wss:') return false;
-      var host = u.hostname;
-      if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') return false;
-      return u.pathname === '/api/ws' || u.pathname.indexOf('/api/ws') === 0;
+      var orig = console[lvl];
+      console[lvl] = function () {
+        if (++consoleCount <= 300) {
+          var parts = [];
+          for (var i = 0; i < arguments.length; i++) {
+            var a = arguments[i];
+            parts.push(a && a.stack ? String(a.stack).split('\n').slice(0, 3).join(' <- ') : String(a));
+          }
+          plog('[console.' + lvl + '] ' + parts.join(' '));
+        }
+        return orig.apply(console, arguments);
+      };
+    } catch (e) { /* ignore */ }
+  });
+
+  // loopback network calls (W5): which transports does the renderer use besides the socket?
+  function isLoopbackHost(h) {
+    return h === '127.0.0.1' || h === 'localhost' || h === '[::1]' || h === '::1';
+  }
+  function urlNoQuery(u) {
+    try { var p = new URL(String(u), window.location.href); return p.protocol + '//' + p.host + p.pathname; }
+    catch (e) { return String(u); }
+  }
+  function isLoopbackUrl(u) {
+    try { return isLoopbackHost(new URL(String(u), window.location.href).hostname); } catch (e) { return false; }
+  }
+  function traceNet(kind, u) {
+    if (isLoopbackUrl(u)) trace('NET-' + kind, urlNoQuery(u)); // no query: may hold tickets
+  }
+  try {
+    if (typeof window.fetch === 'function') {
+      var nativeFetch = window.fetch;
+      window.fetch = function (input) {
+        traceNet('fetch', input && input.url ? input.url : input);
+        return nativeFetch.apply(this, arguments);
+      };
+    }
+    if (window.XMLHttpRequest && window.XMLHttpRequest.prototype) {
+      var nativeOpen = window.XMLHttpRequest.prototype.open;
+      window.XMLHttpRequest.prototype.open = function (method, url) {
+        traceNet('xhr', url);
+        return nativeOpen.apply(this, arguments);
+      };
+    }
+  } catch (e) { /* ignore */ }
+
+  // ------------------------------------------------------------------ hermesDesktop
+
+  function lastSeg(path) {
+    var i = path.lastIndexOf('.');
+    return i < 0 ? path : path.slice(i + 1);
+  }
+
+  var PASSTHROUGH_FN_PROPS = { name: 1, length: 1, prototype: 1, call: 1, apply: 1, bind: 1, toString: 1 };
+
+  // Callable + indexable stub: any depth of property access is valid, never throws.
+  function makeStub(path) {
+    var fn = function () {
+      trace('CALL', path);
+      if (/^on[A-Z]/.test(lastSeg(path))) return function () {};
+      return Promise.resolve(null);
+    };
+    return new Proxy(fn, {
+      get: function (t, prop) {
+        if (typeof prop === 'symbol') {
+          if (prop === Symbol.toPrimitive) return function () { return '[poseidon-stub ' + path + ']'; };
+          return undefined;
+        }
+        if (prop === 'then' || prop === 'catch' || prop === 'finally' || prop === 'toJSON') return undefined;
+        if (PASSTHROUGH_FN_PROPS[prop]) return Reflect.get(t, prop);
+        trace('MISS', path + '.' + prop);
+        return makeStub(path + '.' + prop);
+      }
+    });
+  }
+
+  var api = {
+    windowControls: {
+      custom: true,
+      minimize: function () { return invoke('window_minimize'); },
+      toggleMaximize: function () { return invoke('window_maximize'); },
+      close: function () { return invoke('window_close'); }
+    },
+    getVersion: function () {
+      return invoke('get_version').then(function (v) { return String(v || '0.1.0'); });
+    },
+    getGatewayWsUrl: function () { return invoke('get_gateway_ws_url'); },
+    getConnection: function () { return invoke('get_connection'); },
+    getConnectionFor: function () { return invoke('get_connection'); },
+    setActiveConnectionRoute: function (route) {
+      return invoke('set_active_connection_route', { route: route || {} });
+    },
+    getBootProgress: function () { return invoke('get_boot_progress'); },
+    openExternal: function (url) { return invoke('open_external', { url: url }); },
+    glassSupported: false,
+    translucencySupported: false,
+    localModelsEnabled: false,
+    assumeFreshInstall: false,
+    // backend-sync.ts: (localSkin?.profile ?? '').trim() — must not be Proxy
+    localSkin: null,
+    __poseidon: {
+      version: VERSION,
+      getSystemInfo: function () { return invoke('get_system_info'); },
+      gatewayEnsure: function () { return invoke('gateway_ensure'); },
+      gatewayEnsureJson: function () { return invoke('gateway_ensure_json'); }
+    }
+  };
+
+  var hitSeen = {};
+  window.hermesDesktop = new Proxy(api, {
+    get: function (t, prop) {
+      if (typeof prop === 'symbol') return undefined;
+      if (prop === 'then' || prop === 'toJSON') return undefined;
+      if (prop === 'localSkin') return null;
+      if (Object.prototype.hasOwnProperty.call(t, prop)) {
+        if (!hitSeen[prop]) { hitSeen[prop] = 1; trace('HIT', 'hermesDesktop.' + String(prop)); }
+        return t[prop];
+      }
+      trace('MISS', 'hermesDesktop.' + String(prop));
+      return makeStub('hermesDesktop.' + String(prop));
+    },
+    has: function () { return true; }
+  });
+
+  // ------------------------------------------------------------------ WebSocket shim
+
+  var NativeWebSocket = window.WebSocket;
+  var wsCounter = 0;
+  var sessions = {};
+  var listenersReady = null;
+
+  function mkEvent(type, props) {
+    var ev;
+    try { ev = new Event(type); } catch (e) { ev = { type: type }; }
+    Object.keys(props || {}).forEach(function (k) {
+      try { Object.defineProperty(ev, k, { value: props[k], enumerable: true }); } catch (e) { /* ignore */ }
+    });
+    return ev;
+  }
+  function mkMessage(data) {
+    try { return new MessageEvent('message', { data: data }); } catch (e) { return mkEvent('message', { data: data }); }
+  }
+  function mkClose(code, reason, wasClean) {
+    try { return new CloseEvent('close', { code: code, reason: reason, wasClean: wasClean }); }
+    catch (e) { return mkEvent('close', { code: code, reason: reason, wasClean: wasClean }); }
+  }
+
+  function ensureListeners() {
+    if (listenersReady) return listenersReady;
+    listenersReady = ready().then(function () {
+      return Promise.all([
+        listen('gateway-ws-session-frame', function (e) {
+          var p = (e && e.payload) || {};
+          var s = sessions[p.id];
+          if (s) s._onFrame(String(p.data));
+        }),
+        listen('gateway-ws-session-status', function (e) {
+          var p = (e && e.payload) || {};
+          var s = sessions[p.id];
+          if (s) s._onStatus(p);
+        })
+      ]);
+    }).catch(function (err) {
+      listenersReady = null;
+      throw err;
+    });
+    return listenersReady;
+  }
+
+  function isGatewayUrl(u) {
+    try {
+      var p = new URL(String(u), window.location.href);
+      return (p.protocol === 'ws:') && isLoopbackHost(p.hostname) && p.pathname === '/api/ws';
     } catch (e) {
       return false;
     }
   }
 
-  var nextId = 1;
-
-  function PoseidonWebSocket(url, protocols) {
-    if (!(this instanceof PoseidonWebSocket)) {
-      return new PoseidonWebSocket(url, protocols);
-    }
-    // Non-gateway → native (Vite HMR, etc.)
-    if (!isGatewayWsUrl(String(url))) {
-      return new NativeWebSocket(url, protocols);
-    }
-
-    this.url = String(url);
-    console.log("[Poseidon] gateway WS dial", this.url, protocols);
-    this.protocol = '';
-    this.readyState = PoseidonWebSocket.CONNECTING;
-    this.bufferedAmount = 0;
-    this.binaryType = 'blob';
-    this.extensions = '';
-    this._id = 'pws-' + nextId++;
-    this._listeners = { open: [], message: [], error: [], close: [] };
-    this.onopen = null;
-    this.onmessage = null;
-    this.onerror = null;
-    this.onclose = null;
-
-    var protos = [];
-    if (typeof protocols === 'string') protos = [protocols];
-    else if (Array.isArray(protocols)) protos = protocols.slice();
-    this._protocols = protos;
-
-    var self = this;
-    var invoke = getInvoke();
-    var listen = getListen();
-    if (!invoke || !listen) {
-      queueMicrotask(function () {
-        self._fail('Tauri API not available');
-      });
-      return this;
+  class PoseidonWebSocket extends EventTarget {
+    constructor(url, protocols) {
+      super();
+      this.url = String(url);
+      this.readyState = 0;
+      this.protocol = '';
+      this.extensions = '';
+      this.binaryType = 'blob';
+      this.bufferedAmount = 0;
+      this.onopen = null;
+      this.onmessage = null;
+      this.onerror = null;
+      this.onclose = null;
+      this._id = 'ws-' + (++wsCounter) + '-' + Math.random().toString(36).slice(2, 8);
+      this._queue = [];
+      this._opened = false;
+      this._closed = false;
+      this._closeRequested = null;
+      this._chain = Promise.resolve();
+      var list = protocols == null ? [] : (typeof protocols === 'string' ? [protocols] : Array.prototype.slice.call(protocols));
+      this._protos = list.map(String);
+      sessions[this._id] = this;
+      trace('WS-SHIM', 'open ' + redact(this.url));
+      var self = this;
+      ensureListeners()
+        .then(function () {
+          return invoke('gateway_ws_open', { id: self._id, url: self.url, protocols: self._protos });
+        })
+        .then(function (st) {
+          self._markOpen(st && st.message);
+        })
+        .catch(function (err) {
+          self._fail(err);
+        });
     }
 
-    this._offs = [];
-    listen('gateway-ws-frame', function (e) {
-      var p = e.payload || {};
-      if (p.id !== self._id) return;
-      var data = typeof p.data === 'string' ? p.data : JSON.stringify(p.data);
-      var ev = { data: data, type: 'message', target: self };
-      if (self.onmessage) self.onmessage(ev);
-      self._emit('message', ev);
-    }).then(function (off) { self._offs.push(off); });
-
-    listen('gateway-ws-status', function (e) {
-      var p = e.payload || {};
-      if (p.id !== self._id) return;
-      if (p.connected === true && self.readyState === PoseidonWebSocket.CONNECTING) {
-        self.readyState = PoseidonWebSocket.OPEN;
-        if (p.protocol) self.protocol = p.protocol;
-        var ev = { type: 'open', target: self };
-        if (self.onopen) self.onopen(ev);
-        self._emit('open', ev);
-      } else if (p.connected === false) {
-        var wasOpen = self.readyState === PoseidonWebSocket.OPEN || self.readyState === PoseidonWebSocket.CLOSING;
-        self.readyState = PoseidonWebSocket.CLOSED;
-        var cev = {
-          type: 'close',
-          code: p.code != null ? p.code : 1006,
-          reason: p.message || '',
-          wasClean: !!p.wasClean,
-          target: self
-        };
-        if (self.onclose) self.onclose(cev);
-        self._emit('close', cev);
-        self._cleanup();
+    _emit(type, ev) {
+      var h = this['on' + type];
+      if (typeof h === 'function') {
+        try { h.call(this, ev); } catch (e) { plog('[ws-shim] handler error ' + type + ': ' + e); }
       }
-    }).then(function (off) { self._offs.push(off); });
+      try { this.dispatchEvent(ev); } catch (e) { /* ignore */ }
+    }
 
-    invoke('gateway_ws_open', {
-      id: this._id,
-      url: this.url,
-      protocols: this._protocols
-    }).catch(function (err) {
-      self._fail(String(err));
-    });
+    _markOpen(message) {
+      if (this._opened || this._closed) return;
+      this._opened = true;
+      this.readyState = 1;
+      var m = /protocol=(\S+)/.exec(String(message || ''));
+      this.protocol = m ? m[1] : 'hermes-gateway-v1';
+      this._emit('open', mkEvent('open', {}));
+      var q = this._queue;
+      this._queue = [];
+      for (var i = 0; i < q.length; i++) this._emit('message', mkMessage(q[i]));
+      if (this._closeRequested) this._doClose();
+    }
 
-    return this;
+    _onFrame(data) {
+      if (this._closed) return;
+      if (!this._opened) { this._queue.push(data); return; }
+      this._emit('message', mkMessage(data));
+    }
+
+    _onStatus(p) {
+      if (p.connected === true) { this._markOpen(p.message); return; }
+      this._finish(typeof p.code === 'number' ? p.code : 1006, String(p.message || ''));
+    }
+
+    _fail(err) {
+      plog('[ws-shim] open failed: ' + (err && err.message ? err.message : err));
+      this._finish(1006, String((err && err.message) || err));
+    }
+
+    _finish(code, reason) {
+      if (this._closed) return;
+      this._closed = true;
+      var wasOpen = this._opened;
+      this.readyState = 3;
+      delete sessions[this._id];
+      if (!wasOpen) this._emit('error', mkEvent('error', {}));
+      var wasClean = code === 1000 || code === 1001;
+      this._emit('close', mkClose(this._closeRequested ? this._closeRequested.code : code, reason, wasClean));
+    }
+
+    send(data) {
+      if (this.readyState === 0) {
+        throw (typeof DOMException === 'function'
+          ? new DOMException('WebSocket is still in CONNECTING state', 'InvalidStateError')
+          : new Error('InvalidStateError: WebSocket is still in CONNECTING state'));
+      }
+      if (this.readyState !== 1) return;
+      var text;
+      if (typeof data === 'string') {
+        text = data;
+      } else if (data && typeof ArrayBuffer !== 'undefined' && (data instanceof ArrayBuffer || ArrayBuffer.isView(data))) {
+        text = new TextDecoder().decode(data);
+      } else {
+        plog('[ws-shim] unsupported send payload type; dropped');
+        return;
+      }
+      var self = this;
+      // serialize IPC calls: async Tauri commands may otherwise run out of order
+      this._chain = this._chain
+        .then(function () { return invoke('gateway_ws_send_to', { id: self._id, text: text }); })
+        .catch(function (err) {
+          plog('[ws-shim] send failed: ' + (err && err.message ? err.message : err));
+          self._emit('error', mkEvent('error', {}));
+        });
+    }
+
+    close(code, reason) {
+      if (this.readyState >= 2) return;
+      this._closeRequested = { code: typeof code === 'number' ? code : 1000, reason: reason ? String(reason) : '' };
+      this.readyState = 2;
+      if (this._opened) this._doClose();
+      // if still connecting: _markOpen() or _fail() will finish the job
+    }
+
+    _doClose() {
+      var self = this;
+      this._chain = this._chain
+        .then(function () { return invoke('gateway_ws_close_id', { id: self._id }); })
+        .catch(function () { /* fall through to the timer */ });
+      // Rust reports the close; if that never arrives, finish locally.
+      setTimeout(function () {
+        if (!self._closed) self._finish(self._closeRequested ? self._closeRequested.code : 1000, 'client close');
+      }, 2000);
+    }
   }
 
-  PoseidonWebSocket.CONNECTING = 0;
-  PoseidonWebSocket.OPEN = 1;
-  PoseidonWebSocket.CLOSING = 2;
-  PoseidonWebSocket.CLOSED = 3;
-  PoseidonWebSocket.prototype.CONNECTING = 0;
-  PoseidonWebSocket.prototype.OPEN = 1;
-  PoseidonWebSocket.prototype.CLOSING = 2;
-  PoseidonWebSocket.prototype.CLOSED = 3;
+  ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'].forEach(function (name, i) {
+    Object.defineProperty(PoseidonWebSocket, name, { value: i });
+    Object.defineProperty(PoseidonWebSocket.prototype, name, { value: i });
+  });
 
-  PoseidonWebSocket.prototype._emit = function (type, ev) {
-    (this._listeners[type] || []).forEach(function (fn) {
-      try { fn.call(this, ev); } catch (e) { console.error(e); }
-    }.bind(this));
-  };
-
-  PoseidonWebSocket.prototype._fail = function (msg) {
-    this.readyState = PoseidonWebSocket.CLOSED;
-    var err = { type: 'error', message: msg, target: this };
-    if (this.onerror) this.onerror(err);
-    this._emit('error', err);
-    var cev = { type: 'close', code: 1006, reason: msg, wasClean: false, target: this };
-    if (this.onclose) this.onclose(cev);
-    this._emit('close', cev);
-    this._cleanup();
-  };
-
-  PoseidonWebSocket.prototype._cleanup = function () {
-    (this._offs || []).forEach(function (fn) {
-      try { if (typeof fn === 'function') fn(); } catch (e) {}
+  if (typeof NativeWebSocket === 'function') {
+    var WebSocketWrapper = function WebSocket(url, protocols) {
+      if (!new.target) {
+        throw new TypeError("Failed to construct 'WebSocket': Please use the 'new' operator, this DOM object constructor cannot be called as a function.");
+      }
+      if (isGatewayUrl(url)) return new PoseidonWebSocket(url, protocols);
+      if (isLoopbackUrl(url)) trace('WS-NATIVE', redact(urlNoQuery(url)));
+      return protocols === undefined ? new NativeWebSocket(url) : new NativeWebSocket(url, protocols);
+    };
+    WebSocketWrapper.prototype = NativeWebSocket.prototype;
+    ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'].forEach(function (k) {
+      Object.defineProperty(WebSocketWrapper, k, { value: NativeWebSocket[k] });
     });
-    this._offs = [];
-  };
-
-  PoseidonWebSocket.prototype.send = function (data) {
-    if (this.readyState !== PoseidonWebSocket.OPEN) {
-      throw new Error('InvalidStateError: still in CONNECTING state');
-    }
-    var invoke = getInvoke();
-    var text = typeof data === 'string' ? data : String(data);
-    invoke('gateway_ws_send', { id: this._id, text: text }).catch(function (err) {
-      console.error('[PoseidonWebSocket] send', err);
+    Object.defineProperty(WebSocketWrapper, Symbol.hasInstance, {
+      value: function (o) { return o instanceof NativeWebSocket || o instanceof PoseidonWebSocket; }
     });
-  };
+    window.WebSocket = WebSocketWrapper;
+  }
 
-  PoseidonWebSocket.prototype.close = function (code, reason) {
-    if (this.readyState === PoseidonWebSocket.CLOSED || this.readyState === PoseidonWebSocket.CLOSING) return;
-    this.readyState = PoseidonWebSocket.CLOSING;
-    var invoke = getInvoke();
-    invoke('gateway_ws_close', {
-      id: this._id,
-      code: code != null ? code : 1000,
-      reason: reason || ''
-    }).catch(function () {});
-  };
-
-  PoseidonWebSocket.prototype.addEventListener = function (type, fn) {
-    if (!this._listeners[type]) this._listeners[type] = [];
-    this._listeners[type].push(fn);
-  };
-  PoseidonWebSocket.prototype.removeEventListener = function (type, fn) {
-    if (!this._listeners[type]) return;
-    this._listeners[type] = this._listeners[type].filter(function (f) { return f !== fn; });
-  };
-  PoseidonWebSocket.prototype.dispatchEvent = function () { return true; };
-
-  // Install shim
-  window.WebSocket = PoseidonWebSocket;
   window.PoseidonWebSocket = PoseidonWebSocket;
-  window.__POSEIDON_NATIVE_WS__ = NativeWebSocket;
 
-  // --- hermesDesktop recursive Proxy ---
-  function getInvokeSafe() {
-    return getInvoke();
-  }
+  // ------------------------------------------------------------------ banner + white-screen probe
 
-  function recursiveStub(path) {
-    var defaultProfile = {
-      id: "default",
-      name: "default",
-      display_name: "Default",
-      displayName: "Default",
-      path: "",
-      home: "",
-      kind: "local",
-      is_default: true,
-      isDefault: true
-    };
-    return new Proxy(function () {}, {
-      get: function (_t, prop) {
-        if (typeof prop === 'symbol') return undefined;
-        var key = String(prop);
-        // Avoid treating stub as thenable accidentally returning non-profile
-        if (key === 'then') return undefined;
-        if (key === 'toJSON') return function () { return defaultProfile; };
-        if (key === 'toString' || key === 'valueOf') return function () { return "Default"; };
-        // String fields upstream often call .trim()
-        if (key === 'name' || key === 'displayName' || key === 'id' || key === 'path' ||
-            key === 'home' || key === 'kind' || key === 'title' || key === 'label' ||
-            /Name$|Title$|Label$|Id$|Path$/.test(key)) {
-          return "Default";
-        }
-        if (key === 'profiles') return [defaultProfile];
-        if (key === 'length') return 0;
-        if (/^on[A-Z]/.test(key)) {
-          return function () { return function () {}; };
-        }
-        return recursiveStub(path + '.' + key);
-      },
-      apply: function (_t, _this, args) {
-        var inv = getInvokeSafe();
-        console.warn('[Poseidon stub call]', path, args && args.length);
-        if (inv) {
-          inv('append_ui_log', { line: 'stub:' + path }).catch(function () {});
-        }
-        // Prefer profile-shaped result — callers often do (await x).name.trim()
-        return Promise.resolve(defaultProfile);
-      }
-    });
-  }
+  plog('[poseidon] bootstrap ' + VERSION + ' installed href=' + redact(window.location && window.location.href));
 
-
-  function normalizeConnection(c) {
-    if (!c || typeof c !== "object") {
-      return {
-        kind: "none",
-        mode: "local",
-        state: "idle",
-        profile: "default",
-        connectionId: "local",
-        baseUrl: null,
-        apiOrigin: null,
-        wsUrl: null,
-        authMode: "native",
-        token: ""
-      };
+  try {
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('DOMContentLoaded', function () {
+        try {
+          var b = document.createElement('div');
+          b.id = 'poseidon-boot-banner';
+          b.textContent = 'Poseidon ' + VERSION + ' — hermesDesktop=' + !!window.hermesDesktop;
+          b.style.cssText = 'position:fixed;z-index:2147483647;left:8px;bottom:8px;padding:6px 10px;background:#0e7499;color:#fff;font:12px monospace;border-radius:6px;opacity:0.9;pointer-events:none';
+          (document.body || document.documentElement).appendChild(b);
+          setTimeout(function () { try { b.remove(); } catch (e) { /* ignore */ } }, 8000);
+        } catch (e) { /* ignore */ }
+      });
+      setTimeout(function () {
+        try {
+          var root = document.getElementById('root');
+          plog('[poseidon] t+5s #root children=' + (root ? root.children.length : 'no-root') +
+            ' bodyTextLen=' + ((document.body && document.body.innerText) || '').length);
+        } catch (e) { /* ignore */ }
+      }, 5000);
     }
-    var origin = c.apiOrigin || c.api_origin || c.baseUrl || null;
-    var profile = (typeof c.profile === "string" && c.profile) ? c.profile : "default";
-    return {
-      kind: c.kind || "local",
-      mode: c.mode || c.kind || "local",
-      state: c.state || "ready",
-      profile: profile,
-      profileId: c.profileId || c.profile_id || null,
-      connectionId: c.connectionId || c.connection_id || "local",
-      instanceId: c.instanceId || c.instance_id || null,
-      baseUrl: origin,
-      apiOrigin: origin,
-      wsUrl: c.wsUrl || c.ws_url || null,
-      authMode: c.authMode || "native",
-      token: c.token || "",
-      codeSha: c.codeSha || c.code_sha || null,
-      supervisor: c.supervisor || null,
-      message: c.message || null
-    };
-  }
-
-  function installHermesDesktop() {
-    var invoke = getInvokeSafe();
-    if (!invoke) {
-      console.warn('[Poseidon] hermesDesktop deferred — no invoke yet');
-      return;
-    }
-
-    // Safe default profile shape (strings only — upstream calls .trim())
-    var defaultProfile = {
-      id: "default",
-      name: "default",
-      display_name: "Default",
-      displayName: "Default",
-      path: "",
-      home: "",
-      kind: "local",
-      is_default: true,
-      isDefault: true
-    };
-
-    var api = {
-      windowControls: {
-        custom: true,
-        minimize: function () { invoke('window_minimize'); },
-        toggleMaximize: function () { invoke('window_maximize'); },
-        close: function () { invoke('window_close'); }
-      },
-      getVersion: function () {
-        return invoke('get_version').then(function (v) { return String(v || '0.1.0'); });
-      },
-      getGatewayWsUrl: function () { return invoke('get_gateway_ws_url'); },
-      getConnection: function () {
-        return invoke('get_connection').then(function (c) {
-          return normalizeConnection(c);
-        });
-      },
-      getConnectionFor: function () {
-        return invoke('get_connection').then(function (c) {
-          return normalizeConnection(c);
-        });
-      },
-      setActiveConnectionRoute: function (route) {
-        return invoke('set_active_connection_route', { route: route || {} });
-      },
-      getBootProgress: function () { return invoke('get_boot_progress'); },
-      openExternal: function (url) { return invoke('open_external', { url: url }); },
-      // Profile API — was stub Proxy → (name??"").trim blew up
-      profile: {
-        getDefault: function () { return Promise.resolve(defaultProfile); },
-        get: function () { return Promise.resolve(defaultProfile); },
-        list: function () { return Promise.resolve([defaultProfile]); },
-        getAll: function () { return Promise.resolve([defaultProfile]); },
-        current: function () { return Promise.resolve(defaultProfile); },
-        getActive: function () { return Promise.resolve(defaultProfile); },
-        refresh: function () { return Promise.resolve([defaultProfile]); },
-        refreshProfiles: function () { return Promise.resolve([defaultProfile]); }
-      },
-      profiles: {
-        list: function () { return Promise.resolve([defaultProfile]); },
-        get: function () { return Promise.resolve(defaultProfile); },
-        refresh: function () { return Promise.resolve({ profiles: [defaultProfile] }); }
-      },
-      listProfiles: function () { return Promise.resolve([defaultProfile]); },
-      getProfiles: function () { return Promise.resolve([defaultProfile]); },
-      refreshProfiles: function () { return Promise.resolve([defaultProfile]); },
-      glassSupported: false,
-      translucencySupported: false,
-      localModelsEnabled: false,
-      assumeFreshInstall: false,
-      // Native desktop APIs Hermes calls during boot (must resolve, not Proxy)
-      getOnBattery: function () { return Promise.resolve(false); },
-      setTranslucency: function () { return Promise.resolve(); },
-      setKeepAwake: function () { return Promise.resolve(); },
-      setTitleBarTheme: function () { return Promise.resolve(); },
-      setNativeTheme: function () { return Promise.resolve(); },
-      setActiveWork: function () { return Promise.resolve(); },
-      desktopPluginsRoot: function () { return Promise.resolve(""); },
-      readDir: function () { return Promise.resolve([]); },
-      watchDirectory: function () {
-        return Promise.resolve(function unwatch() {});
-      },
-      api: function () { return Promise.resolve(null); },
-assumeFreshInstall: false,
-      // Skin/profile boot keys must be plain strings (themes/context BOOT_PROFILE_KEY)
-      getLastProfile: function () { return Promise.resolve("default"); },
-      getActiveProfile: function () { return Promise.resolve("default"); },
-      getDisplaySkinProfile: function () { return Promise.resolve("default"); },
-      localDisplaySkinProfile: "default",
-      initialGatewayProfile: "default",
-      // Electron seeds this from main; null = no preloaded skin (backend-sync.ts)
-      // Must NOT be a Proxy — (localSkin.profile ?? '').trim() runs at module load
-      localSkin: null,
-      isPackaged: false,
-      isDev: true,
-      platform: "linux",
-      // host-capabilities often checks these
-      supportsLocalGateway: true,
-      supportsNativeTheme: true
-    };
-
-    window.hermesDesktop = new Proxy(api, {
-      get: function (t, prop) {
-        if (prop in t) return t[prop];
-        var name = String(prop);
-        if (name === 'then') return undefined;
-        // Critical: backend-sync reads localSkin at module load and calls .trim()
-        if (name === 'localSkin') return null;
-        if (name === 'localDisplaySkinProfile' || name === 'localDisplaySkinName') return null;
-        if (/^on[A-Z]/.test(name)) {
-          return function () { return function () {}; };
-        }
-        return recursiveStub(name);
-      },
-      has: function () { return true; }
-    });
-
-    console.log('[Poseidon] bootstrap: WebSocket shim + hermesDesktop ready');
-    // Some Hermes paths still read window.electronAPI
-    if (!window.electronAPI) {
-      window.electronAPI = window.hermesDesktop;
-    }
-    poseidonShowError("Poseidon bootstrap OK — location=" + location.href + " hermesDesktop=" + !!window.hermesDesktop);
-
-    try {
-      invoke('append_ui_log', { line: 'bootstrap ok hermesDesktop+WebSocketShim' }).catch(function () {});
-    } catch (e) {}
-  }
-
-  installHermesDesktop();
-  // Retry if __TAURI__ appears slightly later
-  var tries = 0;
-  var iv = setInterval(function () {
-    tries++;
-    if (window.hermesDesktop && window.hermesDesktop.getVersion) {
-      clearInterval(iv);
-      return;
-    }
-    installHermesDesktop();
-    if (tries > 20) clearInterval(iv);
-  }, 100);
-
-  // After Vite/React should have mounted — report DOM state
-  function poseidonDomProbe(tag) {
-    try {
-      var root = document.getElementById("root") || document.getElementById("app") || document.querySelector("#root, #app, [data-hermes-root]");
-      var bodyKids = document.body ? document.body.children.length : -1;
-      var crash = document.querySelector("[class*='crash'], [class*='z-crash'], [data-testid*='crash']");
-      var crashText = crash ? (crash.innerText || crash.textContent || "").trim().slice(0, 500) : "";
-      var rootText = root ? (root.innerText || "").replace(/\s+/g, " ").trim().slice(0, 120) : "";
-      var rootHtml = root ? (root.innerHTML || "").replace(/\s+/g, " ").trim().slice(0, 200) : "";
-      console.log("[Poseidon] rootHTML", rootHtml);
-      var msg = tag + " root=" + (root ? "yes" : "NO") + " text=[" + rootText + "] "+
-        " bodyChildren=" + bodyKids + " title=" + document.title +
-        (crashText ? (" CRASH=[" + crashText.replace(/\s+/g, " ") + "]") : " noCrashEl");
-      console.log("[Poseidon]", msg);
-      poseidonShowError(msg);
-      var inv = getInvoke && getInvoke();
-      if (inv) inv("append_ui_log", { line: msg }).catch(function () {});
-    } catch (e) {
-      poseidonShowError("dom probe fail: " + e);
-    }
-  }
-  setTimeout(function () { poseidonDomProbe("t+1s"); }, 1000);
-  setTimeout(function () { poseidonDomProbe("t+3s"); }, 3000);
-  setTimeout(function () { poseidonDomProbe("t+6s"); }, 6000);
-  setTimeout(function () { poseidonDomProbe("t+12s"); }, 12000);
-
-  function poseidonKickBoot() {
-    var inv = getInvoke();
-    if (!inv) return;
-    // Sequence: connection → boot → wsUrl (avoid reading boot mid-ensure)
-    inv("get_connection").then(function (c) {
-      console.log("[Poseidon] get_connection", c);
-      poseidonShowError("get_connection: " + JSON.stringify(c).slice(0, 200));
-      inv("append_ui_log", { line: "get_connection " + JSON.stringify(c) }).catch(function () {});
-      return inv("get_boot_progress");
-    }).then(function (b) {
-      console.log("[Poseidon] boot", b);
-      poseidonShowError("boot: " + JSON.stringify(b));
-      return inv("get_gateway_ws_url");
-    }).then(function (u) {
-      console.log("[Poseidon] get_gateway_ws_url", u);
-      poseidonShowError("wsUrl: " + JSON.stringify(u).slice(0, 180));
-    }).catch(function (e) {
-      console.warn("[Poseidon] kick failed", e);
-      poseidonShowError("kick FAIL: " + e);
-    });
-  }
-  setTimeout(poseidonKickBoot, 500);
-  setTimeout(poseidonKickBoot, 2500);
-
+  } catch (e) { /* ignore */ }
 })();
