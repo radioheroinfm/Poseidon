@@ -621,3 +621,10 @@ Log path: walk up to project root for logs/poseidon-ui.log.
 - URL allowlist loopback+/api/ws; protocols hermes-gateway-v1 + ticket
 - lib: initialization_script path when windows=[] (hermes-dev config)
 - ADR-016
+
+### 2026-11-20 — Spike 1 blockers triage
+
+- root.innerHTML empty; no gateway WS dial from Hermes
+- WebKitWebProcess crash on Linux (recurring)
+- hostHas native path OK when isBrowserHostedDesktop=false
+- Next: Chrome vs Tauri compare; HermesConnection shape; boot ready; SPIKE1_NEXT.md

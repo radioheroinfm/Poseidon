@@ -440,7 +440,7 @@ pub async fn get_connection(
                     conn.set_boot(BootProgress {
                         phase: if info.state == "ready" { "ready".into() } else { "ensure".into() },
                         ready: info.state == "ready",
-                        detail: info.api_origin.clone(),
+                        detail: info.api_origin.clone().or(Some("ensure done".into())),
                         percent: Some(if info.state == "ready" { 90 } else { 40 }),
                     });
                     Ok(info)
