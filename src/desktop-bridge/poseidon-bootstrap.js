@@ -194,10 +194,29 @@
   var PASSTHROUGH_FN_PROPS = { name: 1, length: 1, prototype: 1, call: 1, apply: 1, bind: 1, toString: 1 };
 
   // Callable + indexable stub: any depth of property access is valid, never throws.
+  function noop() {}
+
   function makeStub(path) {
     var fn = function () {
       trace('CALL', path);
-      if (/^on[A-Z]/.test(lastSeg(path))) return function () {};
+      var seg = lastSeg(path);
+      // Event subscribe: onFoo(cb) -> unsubscribe fn
+      if (/^on[A-Z]/.test(seg)) return noop;
+      // Disposers must be callable functions (Hermes calls destroy() synchronously)
+      if (/^(destroy|dispose|unwatch|unsubscribe|stop|cancel|close|remove|cleanup)$/i.test(seg)) {
+        return noop;
+      }
+      // watch*/listen*/subscribe* -> Promise<unsub>
+      if (/watch|listen|subscribe|observe/i.test(seg)) {
+        return Promise.resolve(noop);
+      }
+      // Profile list APIs -> empty list (refreshProfiles destructures / .length)
+      if (/profile/i.test(path) && /(list|getAll|refresh|getProfiles)/i.test(seg)) {
+        return Promise.resolve([]);
+      }
+      if (/^(listProfiles|getProfiles|refreshProfiles)$/i.test(seg)) {
+        return Promise.resolve([]);
+      }
       return Promise.resolve(null);
     };
     return new Proxy(fn, {
@@ -208,6 +227,11 @@
         }
         if (prop === 'then' || prop === 'catch' || prop === 'finally' || prop === 'toJSON') return undefined;
         if (PASSTHROUGH_FN_PROPS[prop]) return Reflect.get(t, prop);
+        // Property access .destroy must be a function, not a thenable stub chain
+        if (/^(destroy|dispose|unwatch|unsubscribe|stop|cancel|close|remove|cleanup)$/i.test(String(prop))) {
+          trace('HIT', path + '.' + prop + ' [noop-disposer]');
+          return noop;
+        }
         trace('MISS', path + '.' + prop);
         return makeStub(path + '.' + prop);
       }
@@ -238,6 +262,15 @@
     assumeFreshInstall: false,
     // backend-sync.ts: (localSkin?.profile ?? '').trim() — must not be Proxy
     localSkin: null,
+    getProfiles: function () { return Promise.resolve([]); },
+    listProfiles: function () { return Promise.resolve([]); },
+    refreshProfiles: function () { return Promise.resolve([]); },
+    profile: {
+      getDefault: function () { return Promise.resolve({ name: "default", display_name: "Default", id: "default" }); },
+      get: function () { return Promise.resolve({ name: "default", display_name: "Default", id: "default" }); },
+      list: function () { return Promise.resolve([]); },
+      refresh: function () { return Promise.resolve([]); }
+    },
     __poseidon: {
       version: VERSION,
       getSystemInfo: function () { return invoke('get_system_info'); },
