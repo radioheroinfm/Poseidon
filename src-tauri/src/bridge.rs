@@ -407,11 +407,8 @@ pub async fn get_connection(
     tauri::async_runtime::spawn_blocking(move || {
         #[cfg(unix)]
         {
-            // Single-flight friendly: reuse ready cache (avoids boot flicker + double ensure)
-            if let Some(cached) = conn.ready_cached() {
-                log::info!("get_connection: cache hit ready api_origin={:?}", cached.api_origin);
-                return Ok(cached);
-            }
+            // Always run ensure --json so api_origin stays current after gateway restart.
+            // (Ready-cache hid dead ports → REST Unauthorized / connection refused.)
             conn.set_boot(BootProgress {
                 phase: "ensure".into(),
                 ready: false,
