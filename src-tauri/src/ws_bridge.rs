@@ -484,9 +484,10 @@ mod tests {
         assert!(validate_dial("http://127.0.0.1:55057/api/ws", &p, Some(55057)).is_err());
         // userinfo trick
         assert!(validate_dial("ws://127.0.0.1:1@evil.com:55057/api/ws", &p, Some(55057)).is_err());
-        // wrong port / no announced port
+        // wrong announced port still rejected
         assert!(validate_dial("ws://127.0.0.1:8080/api/ws", &p, Some(55057)).is_err());
-        assert!(validate_dial("ws://127.0.0.1:55057/api/ws", &p, None).is_err());
+        // soft: first loopback dial with allowed_port=None is accepted (renderer race)
+        assert!(validate_dial("ws://127.0.0.1:55057/api/ws", &p, None).is_ok());
         // wrong path
         assert!(validate_dial("ws://127.0.0.1:55057/api/other", &p, Some(55057)).is_err());
         assert!(validate_dial("ws://127.0.0.1:55057/", &p, Some(55057)).is_err());
