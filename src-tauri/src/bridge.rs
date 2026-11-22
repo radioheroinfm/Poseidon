@@ -557,6 +557,7 @@ fn make_emitter(app: AppHandle) -> Emit {
                 id,
                 connected,
                 message,
+                code,
             } => {
                 let _ = app.emit(
                     "gateway-ws-session-status",
@@ -564,6 +565,7 @@ fn make_emitter(app: AppHandle) -> Emit {
                         "id": id,
                         "connected": connected,
                         "message": message,
+                        "code": code,
                     }),
                 );
                 let _ = app.emit(
