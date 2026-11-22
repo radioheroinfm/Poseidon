@@ -594,36 +594,11 @@ pub async fn gateway_ws_open(
     let protocols = protocols.unwrap_or_default();
     let bridge = Arc::clone(&bridge);
     tauri::async_runtime::spawn_blocking(move || {
-        // Race fix: renderer may dial before getGatewayWsUrl side-effect lands.
-        // Announce port from the dial URL itself when it is loopback /api/ws.
+        // Announce port from dial URL only — do NOT call ensure here (startup hang).
         if let Some(port) = crate::ws_bridge::ws_url_port(&url) {
             bridge.allow_port(port);
         }
-        #[cfg(unix)]
-        {
-            // Refresh ensure so gateway is up; ignore errors (open will fail clearly).
-            if let Ok(payload) = crate::local_gateway::gateway_ensure_json() {
-                if let Some(ep) = payload.endpoint.as_ref() {
-                    if let Some(port) = crate::ws_bridge::ws_url_port(&format!(
-                        "ws://{}/api/ws",
-                        ep.api_origin
-                            .trim_start_matches("http://")
-                            .trim_start_matches("https://")
-                            .trim_end_matches('/')
-                    )) {
-                        bridge.allow_port(port);
-                    }
-                    // Also parse host:port from api_origin
-                    if let Some(hp) = ep.api_origin.rsplit("//").next() {
-                        if let Some((_, p)) = hp.split('/').next().unwrap_or(hp).rsplit_once(':') {
-                            if let Ok(port) = p.parse::<u16>() {
-                                bridge.allow_port(port);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        log::info!("gateway_ws_open id={} url={}", id, url);
         bridge.open(make_emitter(app), &id, &url, &protocols)
     })
     .await

@@ -439,7 +439,12 @@
   function isGatewayUrl(u) {
     try {
       var p = new URL(String(u), window.location.href);
-      return (p.protocol === 'ws:') && isLoopbackHost(p.hostname) && p.pathname === '/api/ws';
+      if (p.protocol !== 'ws:') return false;
+      if (!isLoopbackHost(p.hostname)) return false;
+      // Prefer /api/ws; also catch native_dial query even if path varies
+      if (p.pathname === '/api/ws') return true;
+      if (p.searchParams.has('native_dial')) return true;
+      return false;
     } catch (e) {
       return false;
     }
