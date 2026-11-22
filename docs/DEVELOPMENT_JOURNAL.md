@@ -635,3 +635,9 @@ Log path: walk up to project root for logs/poseidon-ui.log.
 - WsBridge: multi-session, 25ms poll, allow_port, unit tests (cargo on cathedral)
 - node --test scripts/test-bootstrap.mjs → 11/11
 - Preserved: connection ready cache, localSkin null, ensure timeout
+
+### 2026-11-22 — Spike 1: Hermes UI up, fix WS URL shape
+
+- REST profiles OK (native-http + X-Hermes-Gateway-Ticket)
+- Onboarding UI visible at 100%
+- Fix: getGatewayWsUrl unwrap to string for openGatewaySocket
