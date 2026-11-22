@@ -297,7 +297,23 @@
     localSkin: null,
     // ALL renderer REST goes through hermesDesktop.api → main/Tauri (not browser fetch)
     api: function (request) {
-      return invoke('hermes_api', { request: request || {} });
+      return invoke('hermes_api', { request: request || {} }).then(function (res) {
+        var path = (request && request.path) || '';
+        // coding-row expects worktrees array
+        if (/worktree/i.test(path)) {
+          if (Array.isArray(res)) return res;
+          if (res && Array.isArray(res.worktrees)) return res;
+          if (res && typeof res === 'object') {
+            return Object.assign({}, res, { worktrees: Array.isArray(res.worktrees) ? res.worktrees : [] });
+          }
+          return { worktrees: [] };
+        }
+        return res;
+      }).catch(function (err) {
+        var path = (request && request.path) || '';
+        if (/worktree/i.test(path)) return { worktrees: [] };
+        throw err;
+      });
     },
     desktop: {
       claimStartupLatency: function () { return Promise.resolve(null); },
