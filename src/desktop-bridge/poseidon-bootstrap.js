@@ -295,6 +295,10 @@
     assumeFreshInstall: false,
     // backend-sync.ts: (localSkin?.profile ?? '').trim() — must not be Proxy
     localSkin: null,
+    // ALL renderer REST goes through hermesDesktop.api → main/Tauri (not browser fetch)
+    api: function (request) {
+      return invoke('hermes_api', { request: request || {} });
+    },
     getProfiles: function () { return Promise.resolve([]); },
     listProfiles: function () { return Promise.resolve([]); },
     refreshProfiles: function () { return Promise.resolve([]); },

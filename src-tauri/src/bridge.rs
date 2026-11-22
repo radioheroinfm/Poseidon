@@ -667,6 +667,148 @@ pub async fn gateway_ws_status(
 }
 
 
+
+// ---------------------------------------------------------------------------
+// hermesDesktop.api — Electron-compatible REST proxy (renderer never fetches)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesApiRequest {
+    pub path: String,
+    pub method: Option<String>,
+    pub body: Option<serde_json::Value>,
+    pub connection_id: Option<String>,
+    pub profile: Option<String>,
+    pub priority: Option<String>,
+    pub timeout_ms: Option<u64>,
+}
+
+#[tauri::command]
+pub async fn hermes_api(request: HermesApiRequest) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(unix)]
+        {
+            hermes_api_local(request)
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = request;
+            Err("hermes_api is unix-only for now".into())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[cfg(unix)]
+fn hermes_api_local(request: HermesApiRequest) -> Result<serde_json::Value, String> {
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+    use std::time::Duration;
+
+    let ensure = crate::local_gateway::gateway_ensure_json()?;
+    let ep = ensure
+        .endpoint
+        .ok_or_else(|| "ensure returned no endpoint".to_string())?;
+    let origin = ep.api_origin.trim_end_matches('/').to_string();
+    // origin like http://127.0.0.1:55555
+    let url_path = if request.path.starts_with('/') {
+        request.path.clone()
+    } else {
+        format!("/{}", request.path)
+    };
+    let method = request
+        .method
+        .as_deref()
+        .unwrap_or("GET")
+        .to_uppercase();
+
+    // Mint session ticket (same control plane as WS)
+    let ticket = crate::local_gateway::mint_session_ticket(&ep.instance_id, &ep.profile_id)?;
+
+    // Parse host:port from origin
+    let without = origin
+        .strip_prefix("http://")
+        .or_else(|| origin.strip_prefix("https://"))
+        .ok_or_else(|| format!("bad api_origin {}", origin))?;
+    let host_port = without.split('/').next().unwrap_or(without);
+    let (host, port): (&str, u16) = if let Some((h, p)) = host_port.rsplit_once(':') {
+        (h, p.parse().map_err(|_| format!("bad port in {}", origin))?)
+    } else {
+        (host_port, 80)
+    };
+
+    let body_str = request
+        .body
+        .as_ref()
+        .map(|b| serde_json::to_string(b).unwrap_or_else(|_| "{}".into()));
+
+    // Prefer Authorization: Bearer <ticket>; gateway may also accept cookie
+    let mut req = format!(
+        "{} {} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nAuthorization: Bearer {}\r\nConnection: close\r\n",
+        method, url_path, host_port, ticket
+    );
+    if let Some(ref profile) = request.profile {
+        if !profile.is_empty() {
+            req.push_str(&format!("X-Hermes-Profile: {}\r\n", profile));
+        }
+    }
+    if let Some(ref b) = body_str {
+        req.push_str("Content-Type: application/json\r\n");
+        req.push_str(&format!("Content-Length: {}\r\n", b.len()));
+    }
+    req.push_str("\r\n");
+    if let Some(ref b) = body_str {
+        req.push_str(b);
+    }
+
+    let mut stream = TcpStream::connect(format!("{}:{}", host, port))
+        .map_err(|e| format!("connect {}:{}: {}", host, port, e))?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(60)))
+        .ok();
+    stream
+        .set_write_timeout(Some(Duration::from_secs(15)))
+        .ok();
+    stream
+        .write_all(req.as_bytes())
+        .map_err(|e| format!("write: {}", e))?;
+
+    let mut buf = Vec::new();
+    stream
+        .read_to_end(&mut buf)
+        .map_err(|e| format!("read: {}", e))?;
+    let text = String::from_utf8_lossy(&buf);
+    // Split headers / body
+    let body = text
+        .split("\r\n\r\n")
+        .nth(1)
+        .or_else(|| text.split("\n\n").nth(1))
+        .unwrap_or("")
+        .trim();
+    if body.is_empty() {
+        return Err(format!("empty HTTP body from {}{}", origin, url_path));
+    }
+    // Status line check
+    let status_line = text.lines().next().unwrap_or("");
+    if status_line.contains(" 401 ") || status_line.contains(" 403 ") {
+        return Err(format!(
+            "hermes_api unauthorized: {} body={}",
+            status_line,
+            &body[..body.len().min(200)]
+        ));
+    }
+    serde_json::from_str(body).map_err(|e| {
+        format!(
+            "hermes_api JSON parse: {} body={}",
+            e,
+            &body[..body.len().min(300)]
+        )
+    })
+}
+
+
 // ---------------------------------------------------------------------------
 // UI log file
 // ---------------------------------------------------------------------------
