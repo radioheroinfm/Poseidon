@@ -159,10 +159,11 @@ pub fn validate_dial(
     }
     match allowed_port {
         None => {
-            return Err("no gateway endpoint announced yet (call getGatewayWsUrl first)".into())
+            // Soft: allow first dial on loopback (renderer race before mint side-effect)
+            log::warn!("validate_dial: no allowed_port yet; accepting loopback port {}", port);
         }
         Some(p) if p != port => {
-            return Err(format!("port {} is not the announced gateway port", port))
+            return Err(format!("port {} is not the announced gateway port {}", port, p))
         }
         Some(_) => {}
     }
