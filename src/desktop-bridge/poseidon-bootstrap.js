@@ -299,6 +299,11 @@
     api: function (request) {
       return invoke('hermes_api', { request: request || {} });
     },
+    desktop: {
+      claimStartupLatency: function () { return Promise.resolve(null); },
+      reportStartupLatency: function () { return Promise.resolve(); }
+    },
+    claimStartupLatency: function () { return Promise.resolve(null); },
     getProfiles: function () { return Promise.resolve([]); },
     listProfiles: function () { return Promise.resolve([]); },
     refreshProfiles: function () { return Promise.resolve([]); },
