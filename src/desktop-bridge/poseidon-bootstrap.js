@@ -206,18 +206,23 @@
       if (/^(destroy|dispose|unwatch|unsubscribe|stop|cancel|close|remove|cleanup)$/i.test(seg)) {
         return noop;
       }
-      // watch*/listen*/subscribe* -> Promise<unsub>
+      // watch*/listen*/subscribe* -> Promise<unsub> OR sync unsub (both safe)
       if (/watch|listen|subscribe|observe/i.test(seg)) {
         return Promise.resolve(noop);
       }
-      // Profile list APIs -> empty list (refreshProfiles destructures / .length)
+      // Profile list APIs -> empty list
       if (/profile/i.test(path) && /(list|getAll|refresh|getProfiles)/i.test(seg)) {
         return Promise.resolve([]);
       }
       if (/^(listProfiles|getProfiles|refreshProfiles)$/i.test(seg)) {
         return Promise.resolve([]);
       }
-      return Promise.resolve(null);
+      // Clearly async getters
+      if (/^(get|list|fetch|load|read|query|request|ensure|refresh|check)/i.test(seg)) {
+        return Promise.resolve(null);
+      }
+      // DEFAULT: sync noop — so `const destroy = api.foo()` is callable
+      return noop;
     };
     return new Proxy(fn, {
       get: function (t, prop) {
