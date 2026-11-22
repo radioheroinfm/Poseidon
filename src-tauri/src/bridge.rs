@@ -725,7 +725,7 @@ fn hermes_api_local(request: HermesApiRequest) -> Result<serde_json::Value, Stri
         .to_uppercase();
 
     // Mint session ticket (same control plane as WS)
-    let ticket = crate::local_gateway::mint_session_ticket(&ep.instance_id, &ep.profile_id)?;
+    let ticket = crate::local_gateway::mint_session_ticket_for(&ep.instance_id, &ep.profile_id, "native-http")?;
 
     // Parse host:port from origin
     let without = origin
@@ -746,21 +746,18 @@ fn hermes_api_local(request: HermesApiRequest) -> Result<serde_json::Value, Stri
 
     // Try several auth presentations; Electron main uses a private ticket channel.
     let auth_attempts: Vec<(String, String)> = vec![
+        // Electron native HTTP grant (local-gateway.ts → X-Hermes-Gateway-Ticket)
+        (
+            "X-Hermes-Gateway-Ticket".into(),
+            format!("X-Hermes-Gateway-Ticket: {}\r\n", ticket),
+        ),
+        (
+            "X-Hermes-Session-Token".into(),
+            format!("X-Hermes-Session-Token: {}\r\n", ticket),
+        ),
         (
             "Authorization Bearer".into(),
             format!("Authorization: Bearer {}\r\n", ticket),
-        ),
-        (
-            "X-Hermes-Ticket".into(),
-            format!("X-Hermes-Ticket: {}\r\n", ticket),
-        ),
-        (
-            "Cookie hermes_ticket".into(),
-            format!("Cookie: hermes_ticket={}\r\n", ticket),
-        ),
-        (
-            "query ticket".into(),
-            String::new(), // handled via path
         ),
     ];
 

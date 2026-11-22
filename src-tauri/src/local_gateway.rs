@@ -147,22 +147,36 @@ pub fn mint_session_ticket(
     instance_id: &str,
     profile_id: &str,
 ) -> Result<String, String> {
+    mint_session_ticket_for(instance_id, profile_id, "interactive")
+}
+
+/// Mint ticket with explicit purpose (`interactive` for WS, `native-http` for REST).
+pub fn mint_session_ticket_for(
+    instance_id: &str,
+    profile_id: &str,
+    purpose: &str,
+) -> Result<String, String> {
     let home = hermes_home();
     let sock = resolve_sock_path(&home);
     if !sock.exists() {
         return Err(format!("gateway.sock not found at {:?}", sock));
     }
 
+    // Electron: ticketScope(purpose) → { scope: "host" } only for interactive
+    let mut params = serde_json::json!({
+        "profile_id": profile_id,
+        "instance_id": instance_id,
+        "purpose": purpose
+    });
+    if purpose == "interactive" {
+        params["scope"] = serde_json::json!("host");
+    }
+
     let req = serde_json::json!({
         "protocol": 1,
         "id": 1,
         "verb": "session-ticket",
-        "params": {
-            "profile_id": profile_id,
-            "instance_id": instance_id,
-            "purpose": "interactive",
-            "scope": "host"
-        }
+        "params": params
     });
 
     let mut stream = UnixStream::connect(&sock)
