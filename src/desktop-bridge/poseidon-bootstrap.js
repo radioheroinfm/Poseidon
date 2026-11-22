@@ -253,7 +253,16 @@
     getVersion: function () {
       return invoke('get_version').then(function (v) { return String(v || '0.1.0'); });
     },
-    getGatewayWsUrl: function () { return invoke('get_gateway_ws_url'); },
+    getGatewayWsUrl: function () {
+      return invoke('get_gateway_ws_url').then(function (r) {
+        if (typeof r === 'string') return r;
+        if (r && typeof r.wsUrl === 'string') return r.wsUrl;
+        if (r && r.ok === false) {
+          return Promise.reject(new Error(r.error || 'getGatewayWsUrl failed'));
+        }
+        return Promise.reject(new Error('getGatewayWsUrl: empty result'));
+      });
+    },
     getConnection: function () {
       return invoke('get_connection').then(function (c) {
         if (!c || typeof c !== 'object') return c;
@@ -287,7 +296,18 @@
     setActiveConnectionRoute: function (route) {
       return invoke('set_active_connection_route', { route: route || {} });
     },
-    getBootProgress: function () { return invoke('get_boot_progress'); },
+    getBootProgress: function () {
+      return invoke('get_boot_progress').then(function (b) {
+        if (b && b.ready) return b;
+        // Don't leave onboarding spinning if shell + gateway already up
+        return invoke('get_connection').then(function (c) {
+          if (c && c.state === 'ready') {
+            return { phase: 'ready', ready: true, detail: c.apiOrigin || c.baseUrl || 'ready', percent: 100 };
+          }
+          return b || { phase: 'poseidon', ready: true, percent: 100 };
+        });
+      });
+    },
     openExternal: function (url) { return invoke('open_external', { url: url }); },
     glassSupported: false,
     translucencySupported: false,
@@ -457,6 +477,8 @@
           self._markOpen(st && st.message);
         })
         .catch(function (err) {
+          console.error('[Poseidon] gateway_ws_open failed', err);
+          try { plog('[ws-shim] open failed ' + String(err)); } catch (e1) {}
           self._fail(err);
         });
     }
