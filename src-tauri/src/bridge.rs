@@ -712,7 +712,6 @@ fn hermes_api_local(request: HermesApiRequest) -> Result<serde_json::Value, Stri
         .endpoint
         .ok_or_else(|| "ensure returned no endpoint".to_string())?;
     let origin = ep.api_origin.trim_end_matches('/').to_string();
-    // origin like http://127.0.0.1:55555
     let url_path = if request.path.starts_with('/') {
         request.path.clone()
     } else {
@@ -724,10 +723,13 @@ fn hermes_api_local(request: HermesApiRequest) -> Result<serde_json::Value, Stri
         .unwrap_or("GET")
         .to_uppercase();
 
-    // Mint session ticket (same control plane as WS)
-    let ticket = crate::local_gateway::mint_session_ticket_for(&ep.instance_id, &ep.profile_id, "native-http")?;
+    // Electron: purpose=native-http + X-Hermes-Gateway-Ticket (local-gateway.ts)
+    let ticket = crate::local_gateway::mint_session_ticket_for(
+        &ep.instance_id,
+        &ep.profile_id,
+        "native-http",
+    )?;
 
-    // Parse host:port from origin
     let without = origin
         .strip_prefix("http://")
         .or_else(|| origin.strip_prefix("https://"))
@@ -744,99 +746,76 @@ fn hermes_api_local(request: HermesApiRequest) -> Result<serde_json::Value, Stri
         .as_ref()
         .map(|b| serde_json::to_string(b).unwrap_or_else(|_| "{}".into()));
 
-    // Try several auth presentations; Electron main uses a private ticket channel.
-    let auth_attempts: Vec<(String, String)> = vec![
-        // Electron native HTTP grant (local-gateway.ts → X-Hermes-Gateway-Ticket)
-        (
-            "X-Hermes-Gateway-Ticket".into(),
-            format!("X-Hermes-Gateway-Ticket: {}\r\n", ticket),
-        ),
-        (
-            "X-Hermes-Session-Token".into(),
-            format!("X-Hermes-Session-Token: {}\r\n", ticket),
-        ),
-        (
-            "Authorization Bearer".into(),
-            format!("Authorization: Bearer {}\r\n", ticket),
-        ),
-    ];
-
-    let mut last_err = String::from("no auth attempt succeeded");
-    for (label, auth_header) in auth_attempts {
-        let path_q = if label == "query ticket" {
-            let sep = if url_path.contains('?') { "&" } else { "?" };
-            format!("{}{}ticket={}", url_path, sep, ticket)
-        } else {
-            url_path.clone()
-        };
-        let mut req = format!(
-            "{} {} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nConnection: close\r\n{}",
-            method, path_q, host_port, auth_header
-        );
-        if let Some(ref profile) = request.profile {
-            if !profile.is_empty() {
-                req.push_str(&format!("X-Hermes-Profile: {}\r\n", profile));
-            }
-        }
-        if let Some(ref b) = body_str {
-            req.push_str("Content-Type: application/json\r\n");
-            req.push_str(&format!("Content-Length: {}\r\n", b.len()));
-        }
-        req.push_str("\r\n");
-        if let Some(ref b) = body_str {
-            req.push_str(b);
-        }
-
-        let mut stream = match TcpStream::connect(format!("{}:{}", host, port)) {
-            Ok(s) => s,
-            Err(e) => {
-                last_err = format!("connect {}:{}: {}", host, port, e);
-                continue;
-            }
-        };
-        stream.set_read_timeout(Some(Duration::from_secs(60))).ok();
-        stream.set_write_timeout(Some(Duration::from_secs(15))).ok();
-        if let Err(e) = stream.write_all(req.as_bytes()) {
-            last_err = format!("write: {}", e);
-            continue;
-        }
-        let mut buf = Vec::new();
-        if let Err(e) = stream.read_to_end(&mut buf) {
-            last_err = format!("read: {}", e);
-            continue;
-        }
-        let text = String::from_utf8_lossy(&buf);
-        let body = text
-            .split("\r\n\r\n")
-            .nth(1)
-            .or_else(|| text.split("\n\n").nth(1))
-            .unwrap_or("")
-            .trim()
-            .to_string();
-        let status_line = text.lines().next().unwrap_or("").to_string();
-        if status_line.contains(" 401 ") || status_line.contains(" 403 ") {
-            last_err = format!("auth {} -> {} body={}", label, status_line, &body[..body.len().min(120)]);
-            continue;
-        }
-        if body.is_empty() {
-            last_err = format!("empty body with {}", label);
-            continue;
-        }
-        match serde_json::from_str::<serde_json::Value>(&body) {
-            Ok(v) => {
-                log::info!("hermes_api OK via {}", label);
-                return Ok(v);
-            }
-            Err(e) => {
-                last_err = format!("JSON {} via {}: {}", e, label, &body[..body.len().min(200)]);
-                continue;
-            }
+    let mut req = format!(
+        "{} {} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nX-Hermes-Gateway-Ticket: {}\r\nConnection: close\r\n",
+        method, url_path, host_port, ticket
+    );
+    if let Some(ref profile) = request.profile {
+        if !profile.is_empty() {
+            req.push_str(&format!("X-Hermes-Profile: {}\r\n", profile));
         }
     }
-    Err(format!("hermes_api unauthorized: {}", last_err))
+    if let Some(ref b) = body_str {
+        req.push_str("Content-Type: application/json\r\n");
+        req.push_str(&format!("Content-Length: {}\r\n", b.len()));
+    }
+    req.push_str("\r\n");
+    if let Some(ref b) = body_str {
+        req.push_str(b);
+    }
+
+    let mut stream = TcpStream::connect_timeout(
+        &format!("{}:{}", host, port)
+            .parse()
+            .map_err(|e| format!("parse addr: {}", e))?,
+        Duration::from_secs(5),
+    )
+    .map_err(|e| format!("connect {}:{}: {}", host, port, e))?;
+    stream.set_read_timeout(Some(Duration::from_secs(15))).ok();
+    stream.set_write_timeout(Some(Duration::from_secs(5))).ok();
+    stream
+        .write_all(req.as_bytes())
+        .map_err(|e| format!("write: {}", e))?;
+
+    let mut buf = Vec::new();
+    stream
+        .read_to_end(&mut buf)
+        .map_err(|e| format!("read: {}", e))?;
+    let text = String::from_utf8_lossy(&buf);
+    let body = text
+        .split("\r\n\r\n")
+        .nth(1)
+        .or_else(|| text.split("\n\n").nth(1))
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let status_line = text.lines().next().unwrap_or("").to_string();
+    if status_line.contains(" 401 ") || status_line.contains(" 403 ") {
+        return Err(format!(
+            "hermes_api unauthorized: {} body={}",
+            status_line,
+            &body[..body.len().min(200)]
+        ));
+    }
+    if !(status_line.contains(" 200 ") || status_line.contains(" 201 ") || status_line.contains(" 204 ")) {
+        // still try parse JSON body for structured errors
+        log::warn!("hermes_api status {} body={}", status_line, &body[..body.len().min(120)]);
+    }
+    if body.is_empty() {
+        if status_line.contains(" 204 ") {
+            return Ok(serde_json::json!(null));
+        }
+        return Err(format!("empty HTTP body from {}{}", origin, url_path));
+    }
+    serde_json::from_str(&body).map_err(|e| {
+        format!(
+            "hermes_api JSON parse: {} status={} body={}",
+            e,
+            status_line,
+            &body[..body.len().min(300)]
+        )
+    })
 }
-
-
 
 // ---------------------------------------------------------------------------
 // UI log file
