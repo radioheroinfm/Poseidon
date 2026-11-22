@@ -17,14 +17,21 @@ pub struct ActiveRoute {
 pub struct ConnectionInfo {
     pub kind: String,
     pub state: String,
+    /// Upstream HermesConnection.mode
+    pub mode: String,
     pub api_origin: Option<String>,
+    /// Alias used by renderer REST (same as api_origin)
+    pub base_url: Option<String>,
     pub instance_id: Option<String>,
     pub profile_id: Option<String>,
     /// Hermes ThemeProvider: connection.profile must be a string key
     pub profile: Option<String>,
+    pub connection_id: Option<String>,
     pub ws_url: Option<String>,
     pub code_sha: Option<String>,
     pub supervisor: Option<String>,
+    pub auth_mode: Option<String>,
+    pub token: Option<String>,
     pub message: Option<String>,
 }
 
@@ -33,13 +40,18 @@ impl Default for ConnectionInfo {
         Self {
             kind: "none".into(),
             state: "idle".into(),
+            mode: "local".into(),
             api_origin: None,
+            base_url: None,
             instance_id: None,
             profile_id: None,
             profile: Some("default".into()),
+            connection_id: Some("local".into()),
             ws_url: None,
             code_sha: None,
             supervisor: None,
+            auth_mode: Some("native".into()),
+            token: Some(String::new()),
             message: None,
         }
     }

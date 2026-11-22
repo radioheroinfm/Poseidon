@@ -434,20 +434,26 @@ pub async fn get_connection(
                     // Zhenya #8: do NOT mint ticket here (one-use, 30s).
                     // Mint only in get_gateway_ws_url / probe_gateway_ws.
                     // ensure --json already ran once above (mint_local_ws_url would ensure again).
+                    let origin = api_origin.clone();
                     let info = ConnectionInfo {
                         kind: if payload.state == "ready" {
                             "local".into()
                         } else {
                             "none".into()
                         },
-                        state: payload.state,
-                        api_origin,
+                        state: payload.state.clone(),
+                        mode: "local".into(),
+                        api_origin: origin.clone(),
+                        base_url: origin,
                         instance_id,
                         profile_id,
                         profile: Some("default".into()),
+                        connection_id: Some("local".into()),
                         ws_url: None,
                         code_sha,
                         supervisor,
+                        auth_mode: Some("native".into()),
+                        token: Some(String::new()),
                         message: payload.detail.map(|d| d.to_string()),
                     };
                     conn.set_last(info.clone());

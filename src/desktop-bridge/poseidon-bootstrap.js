@@ -254,8 +254,36 @@
       return invoke('get_version').then(function (v) { return String(v || '0.1.0'); });
     },
     getGatewayWsUrl: function () { return invoke('get_gateway_ws_url'); },
-    getConnection: function () { return invoke('get_connection'); },
-    getConnectionFor: function () { return invoke('get_connection'); },
+    getConnection: function () {
+      return invoke('get_connection').then(function (c) {
+        if (!c || typeof c !== 'object') return c;
+        var origin = c.baseUrl || c.apiOrigin || c.base_url || c.api_origin || null;
+        return Object.assign({}, c, {
+          mode: c.mode || c.kind || 'local',
+          baseUrl: origin,
+          apiOrigin: origin,
+          profile: (typeof c.profile === 'string' && c.profile) ? c.profile : 'default',
+          connectionId: c.connectionId || c.connection_id || 'local',
+          authMode: c.authMode || c.auth_mode || 'native',
+          token: c.token == null ? '' : c.token
+        });
+      });
+    },
+    getConnectionFor: function () {
+      return invoke('get_connection').then(function (c) {
+        if (!c || typeof c !== 'object') return c;
+        var origin = c.baseUrl || c.apiOrigin || null;
+        return Object.assign({}, c, {
+          mode: c.mode || c.kind || 'local',
+          baseUrl: origin,
+          apiOrigin: origin,
+          profile: (typeof c.profile === 'string' && c.profile) ? c.profile : 'default',
+          connectionId: c.connectionId || 'local',
+          authMode: c.authMode || 'native',
+          token: c.token == null ? '' : c.token
+        });
+      });
+    },
     setActiveConnectionRoute: function (route) {
       return invoke('set_active_connection_route', { route: route || {} });
     },
