@@ -301,9 +301,27 @@
     },
     desktop: {
       claimStartupLatency: function () { return Promise.resolve(null); },
+    settings: {
+      getDefaultProjectDir: function () {
+        return invoke('get_default_project_dir');
+      }
+    },
+    sanitizeWorkspaceCwd: function (path) {
+      return invoke('sanitize_workspace_cwd', { path: path || '' });
+    },
+
       reportStartupLatency: function () { return Promise.resolve(); }
     },
     claimStartupLatency: function () { return Promise.resolve(null); },
+    settings: {
+      getDefaultProjectDir: function () {
+        return invoke('get_default_project_dir');
+      }
+    },
+    sanitizeWorkspaceCwd: function (path) {
+      return invoke('sanitize_workspace_cwd', { path: path || '' });
+    },
+
     getProfiles: function () { return Promise.resolve([]); },
     listProfiles: function () { return Promise.resolve([]); },
     refreshProfiles: function () { return Promise.resolve([]); },

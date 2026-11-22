@@ -59,6 +59,8 @@ pub fn run() {
             append_ui_log,
             get_ui_log_path,
             hermes_api,
+            get_default_project_dir,
+            sanitize_workspace_cwd,
         ])
         .setup(|app| {
             log::info!(

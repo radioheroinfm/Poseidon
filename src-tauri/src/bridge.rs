@@ -817,6 +817,35 @@ fn hermes_api_local(request: HermesApiRequest) -> Result<serde_json::Value, Stri
     })
 }
 
+
+#[tauri::command]
+pub async fn get_default_project_dir() -> Result<serde_json::Value, String> {
+    let dir = dirs::home_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|| "/tmp".into());
+    Ok(serde_json::json!({ "dir": dir }))
+}
+
+#[tauri::command]
+pub async fn sanitize_workspace_cwd(path: Option<String>) -> Result<serde_json::Value, String> {
+    let home = dirs::home_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|| "/tmp".into());
+    let raw = path.unwrap_or_default();
+    let cwd = {
+        let t = raw.trim();
+        if t.is_empty() {
+            home
+        } else if std::path::Path::new(t).is_absolute() {
+            t.to_string()
+        } else {
+            // relative → under home
+            format!("{}/{}", home.trim_end_matches('/'), t.trim_start_matches('/'))
+        }
+    };
+    Ok(serde_json::json!({ "cwd": cwd }))
+}
+
 // ---------------------------------------------------------------------------
 // UI log file
 // ---------------------------------------------------------------------------
